@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Opportunity, OpportunityStatus, STATUSES } from '../../lib/types';
-import { Plus, FileText, Users, Calendar, Clock } from 'lucide-react';
+import { Plus, FileText, Users, Calendar, Clock, Upload } from 'lucide-react';
 
 const statusBadgeClass: Record<OpportunityStatus, string> = {
   'Open': 'badge-open',
@@ -12,7 +12,7 @@ const statusBadgeClass: Record<OpportunityStatus, string> = {
 };
 
 export default function AdminDashboard() {
-  const [opportunities, setOpportunities] = useState<(Opportunity & { file_count: number; interest_count: number })[]>([]);
+  const [opportunities, setOpportunities] = useState<(Opportunity & { file_count: number; interest_count: number; submission_count: number })[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'All' | OpportunityStatus>('All');
   const navigate = useNavigate();
@@ -27,7 +27,8 @@ export default function AdminDashboard() {
       .select(`
         *,
         opportunity_files(count),
-        vendor_interest(count)
+        vendor_interest(count),
+        vendor_submissions(vendor_id)
       `)
       .order('created_at', { ascending: false });
 
@@ -36,6 +37,7 @@ export default function AdminDashboard() {
         ...opp,
         file_count: opp.opportunity_files?.[0]?.count ?? 0,
         interest_count: opp.vendor_interest?.[0]?.count ?? 0,
+        submission_count: new Set((opp.vendor_submissions || []).map((s: any) => s.vendor_id)).size,
       }));
       setOpportunities(mapped);
     }
@@ -112,6 +114,7 @@ export default function AdminDashboard() {
                 <th className="px-6 py-3">Volume</th>
                 <th className="px-6 py-3">Files</th>
                 <th className="px-6 py-3">Interested</th>
+                <th className="px-6 py-3">Submissions</th>
                 <th className="px-6 py-3">Created</th>
               </tr>
             </thead>
@@ -153,6 +156,12 @@ export default function AdminDashboard() {
                     <span className="inline-flex items-center gap-1 text-sm text-gray-600">
                       <Users className="w-3.5 h-3.5" />
                       {opp.interest_count}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center gap-1 text-sm text-gray-600">
+                      <Upload className="w-3.5 h-3.5" />
+                      {opp.submission_count}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">{formatDate(opp.created_at)}</td>

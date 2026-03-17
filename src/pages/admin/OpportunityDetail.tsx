@@ -25,7 +25,7 @@ export default function AdminOpportunityDetail() {
   const [interests, setInterests] = useState<VendorInterest[]>([]);
   const [views, setViews] = useState<VendorView[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'interested' | 'viewed' | 'submissions'>('interested');
+  const [tab, setTab] = useState<'interested' | 'viewed' | 'submissions'>('submissions');
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -181,9 +181,9 @@ export default function AdminOpportunityDetail() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Metadata + Files */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-7 space-y-6">
           {/* Metadata Card */}
           <div className="card p-6">
             <h2 className="section-title">Details</h2>
@@ -275,19 +275,19 @@ export default function AdminOpportunityDetail() {
         </div>
 
         {/* Right: Vendor Engagement */}
-        <div className="space-y-6">
+        <div className="lg:col-span-5 space-y-6">
           <div className="card">
             <div className="flex border-b border-gray-200">
               <button
-                onClick={() => setTab('interested')}
+                onClick={() => setTab('submissions')}
                 className={`flex-1 px-4 py-3 text-sm font-medium text-center border-b-2 transition-colors ${
-                  tab === 'interested'
+                  tab === 'submissions'
                     ? 'border-teal-500 text-teal-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <Users className="w-4 h-4 inline mr-1.5" />
-                Interested ({interests.length})
+                <Upload className="w-4 h-4 inline mr-1.5" />
+                Submissions ({submissions.length})
               </button>
               <button
                 onClick={() => setTab('viewed')}
@@ -301,20 +301,77 @@ export default function AdminOpportunityDetail() {
                 Viewed ({views.length})
               </button>
               <button
-                onClick={() => setTab('submissions')}
+                onClick={() => setTab('interested')}
                 className={`flex-1 px-4 py-3 text-sm font-medium text-center border-b-2 transition-colors ${
-                  tab === 'submissions'
+                  tab === 'interested'
                     ? 'border-teal-500 text-teal-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <Upload className="w-4 h-4 inline mr-1.5" />
-                Submits ({submissions.length})
+                <Users className="w-4 h-4 inline mr-1.5" />
+                Interested ({interests.length})
               </button>
             </div>
 
             <div className="p-4">
-              {tab === 'interested' ? (
+              {tab === 'submissions' ? (
+                submissions.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">No submissions yet</p>
+                ) : (() => {
+                  const grouped: Record<string, VendorSubmission[]> = {};
+                  for (const sub of submissions) {
+                    const vendorId = sub.vendor_id;
+                    if (!grouped[vendorId]) grouped[vendorId] = [];
+                    grouped[vendorId].push(sub);
+                  }
+                  return (
+                    <div className="space-y-4">
+                      {Object.entries(grouped).map(([vendorId, vendorSubs]) => {
+                        const profile = (vendorSubs[0] as any).profiles;
+                        const vendorName = profile?.full_name || 'Unknown';
+                        const vendorCompany = profile?.company || '';
+                        const vendorEmail = profile?.email || '';
+                        const initials = vendorName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+                        return (
+                          <div key={vendorId} className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="bg-gradient-to-r from-navy-950 to-navy-900 px-4 py-3 flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                                {initials}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-white truncate">{vendorName}</p>
+                                <p className="text-xs text-gray-300 truncate">
+                                  {vendorCompany ? `${vendorCompany} · ${vendorEmail}` : vendorEmail}
+                                </p>
+                              </div>
+                              <span className="text-xs text-teal-300 font-medium whitespace-nowrap">
+                                {vendorSubs.length} file{vendorSubs.length !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            <div className="divide-y divide-gray-100">
+                              {vendorSubs.map(sub => (
+                                <div key={sub.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                                  <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-gray-700 truncate">{sub.file_name}</p>
+                                    <p className="text-xs text-gray-400">
+                                      {formatDate(sub.created_at)} · {formatFileSize(sub.file_size)}
+                                    </p>
+                                  </div>
+                                  <button onClick={() => handleDownload(sub)} className="btn-secondary text-xs py-1 px-2 flex-shrink-0">
+                                    <Download className="w-3 h-3 mr-1 inline" />
+                                    Get
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
+              ) : tab === 'interested' ? (
                 interests.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-4">No vendor interest yet</p>
                 ) : (
@@ -373,45 +430,7 @@ export default function AdminOpportunityDetail() {
                     ))}
                   </div>
                 )
-              ) : (
-                submissions.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-4">No submissions yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {submissions.map(sub => (
-                      <div key={sub.id} className="border border-gray-200 rounded-md p-3 bg-gray-50">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                           <div className="flex items-center gap-2">
-                             <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-xs uppercase flex-shrink-0">
-                               {((sub as any).profiles?.full_name || (sub as any).profiles?.company || 'U')[0]}
-                             </div>
-                             <div>
-                               <p className="text-sm font-medium text-gray-900">
-                                 {(sub as any).profiles?.full_name || 'Unknown'}
-                               </p>
-                               <p className="text-xs text-gray-500">
-                                 {(sub as any).profiles?.company || (sub as any).profiles?.email}
-                               </p>
-                             </div>
-                           </div>
-                           <span className="text-xs text-gray-400 sm:self-start">{formatDate(sub.created_at)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 p-2 bg-white border border-gray-100 rounded">
-                           <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                           <div className="flex-1 min-w-0">
-                             <p className="text-sm text-gray-700 truncate">{sub.file_name}</p>
-                             <p className="text-xs text-gray-400 font-mono">{formatFileSize(sub.file_size)}</p>
-                           </div>
-                           <button onClick={() => handleDownload(sub)} className="btn-secondary text-xs py-1 px-2 flex-shrink-0">
-                             <Download className="w-3 h-3 mr-1 inline" />
-                             Get
-                           </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              )}
+                ) : null}
             </div>
           </div>
         </div>
