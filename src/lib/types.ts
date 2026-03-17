@@ -22,7 +22,9 @@ export interface Profile {
   created_at: string;
 }
 
-export type ShippingScope = 'Domestic' | 'International' | 'Both';
+export type ShippingRegion = 'Domestic' | 'International';
+
+export const SHIPPING_REGIONS: ShippingRegion[] = ['Domestic', 'International'];
 
 export interface Opportunity {
   id: string;
@@ -31,7 +33,7 @@ export interface Opportunity {
   carriers: string[];
   annual_volume: string;
   fulfillment_type: FulfillmentType;
-  shipping_scope: ShippingScope;
+  shipping_scope: string[];
   status: OpportunityStatus;
   deadline: string | null;
   created_by: string;

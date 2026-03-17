@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/ui/Toast';
-import { CARRIERS, FulfillmentType, ShippingScope, OpportunityStatus, STATUSES } from '../../lib/types';
+import { CARRIERS, FulfillmentType, SHIPPING_REGIONS, ShippingRegion, OpportunityStatus, STATUSES } from '../../lib/types';
 import { Upload, X, FileText, ArrowLeft, Bell } from 'lucide-react';
 
 export default function CreateOpportunity() {
@@ -19,7 +19,7 @@ export default function CreateOpportunity() {
   const [carriers, setCarriers] = useState<string[]>([]);
   const [annualVolume, setAnnualVolume] = useState('');
   const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('Parcel');
-  const [shippingScope, setShippingScope] = useState<ShippingScope>('Domestic');
+  const [shippingRegions, setShippingRegions] = useState<ShippingRegion[]>(['Domestic']);
   const [status, setStatus] = useState<OpportunityStatus>('Open');
   const [deadline, setDeadline] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -50,7 +50,7 @@ export default function CreateOpportunity() {
           setCarriers(data.carriers || []);
           setAnnualVolume(data.annual_volume || '');
           setFulfillmentType(data.fulfillment_type as FulfillmentType);
-          setShippingScope(data.shipping_scope as ShippingScope || 'Domestic');
+          setShippingRegions(Array.isArray(data.shipping_scope) ? data.shipping_scope : [data.shipping_scope || 'Domestic']);
           setStatus(data.status as OpportunityStatus);
           setDeadline(data.deadline || '');
           if (data.carriers && data.carriers.some((c: string) => !standardCarriers.includes(c as any) && c !== 'Other')) {
@@ -63,7 +63,7 @@ export default function CreateOpportunity() {
             carriers: JSON.stringify(data.carriers || []),
             annualVolume: data.annual_volume || '',
             fulfillmentType: data.fulfillment_type,
-            shippingScope: data.shipping_scope || 'Domestic',
+            shippingRegions: JSON.stringify(Array.isArray(data.shipping_scope) ? data.shipping_scope : [data.shipping_scope || 'Domestic']),
             status: data.status,
             deadline: data.deadline || '',
           });
@@ -82,7 +82,7 @@ export default function CreateOpportunity() {
       carriers: JSON.stringify(carriers),
       annualVolume,
       fulfillmentType,
-      shippingScope,
+      shippingRegions: JSON.stringify(shippingRegions),
       status,
       deadline,
     };
@@ -90,7 +90,7 @@ export default function CreateOpportunity() {
       key => (currentValues as any)[key] !== (initialValues as any)[key]
     ) || files.length > 0;
     setIsDirty(dirty);
-  }, [name, description, carriers, annualVolume, fulfillmentType, shippingScope, status, deadline, files, initialValues, isEditing]);
+  }, [name, description, carriers, annualVolume, fulfillmentType, shippingRegions, status, deadline, files, initialValues, isEditing]);
 
   // Warn on browser back / tab close
   useEffect(() => {
@@ -172,7 +172,7 @@ export default function CreateOpportunity() {
         carriers,
         annual_volume: annualVolume.trim(),
         fulfillment_type: fulfillmentType,
-        shipping_scope: shippingScope,
+        shipping_scope: shippingRegions,
         status,
         deadline: deadline || null,
         created_by: user!.id,
@@ -489,29 +489,36 @@ export default function CreateOpportunity() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Shipping Scope
+                    Shipping Region
                   </label>
                   <div className="flex gap-3">
-                    {(['Domestic', 'International', 'Both'] as ShippingScope[]).map(scope => (
-                      <label
-                        key={scope}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm cursor-pointer transition-colors ${
-                          shippingScope === scope
-                            ? 'border-teal-500 bg-teal-50 text-teal-700'
-                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="shippingScope"
-                          value={scope}
-                          checked={shippingScope === scope}
-                          onChange={() => setShippingScope(scope)}
-                          className="sr-only"
-                        />
-                        {scope}
-                      </label>
-                    ))}
+                    {SHIPPING_REGIONS.map(region => {
+                      const isSelected = shippingRegions.includes(region);
+                      return (
+                        <label
+                          key={region}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'border-teal-500 bg-teal-50 text-teal-700'
+                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              setShippingRegions(prev =>
+                                isSelected
+                                  ? prev.filter(r => r !== region)
+                                  : [...prev, region]
+                              );
+                            }}
+                            className="sr-only"
+                          />
+                          {region}
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
                 <div>

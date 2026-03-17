@@ -211,8 +211,8 @@ export default function AdminOpportunityDetail() {
               <div className="flex items-start gap-2">
                 <Globe className="w-4 h-4 text-gray-400 mt-0.5" />
                 <div>
-                  <p className="text-xs text-gray-500">Shipping Scope</p>
-                  <p className="text-sm text-gray-900">{opp.shipping_scope}</p>
+                  <p className="text-xs text-gray-500">Shipping Region</p>
+                  <p className="text-sm text-gray-900">{Array.isArray(opp.shipping_scope) ? opp.shipping_scope.join(', ') : opp.shipping_scope}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
