@@ -69,7 +69,7 @@ export function Sidebar() {
         </button>
 
         {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-6 border-b border-navy-700">
+        <div className="flex items-center gap-3 px-6 py-6 border-b border-navy-700" data-tour="sidebar-logo">
           <div className="w-8 h-8 bg-teal-500 rounded-md flex items-center justify-center">
             <Package className="w-5 h-5 text-white" />
           </div>
@@ -80,7 +80,7 @@ export function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1" data-tour="sidebar-nav">
           {links.map(link => (
             <NavLink
               key={link.to}
@@ -94,6 +94,7 @@ export function Sidebar() {
                     : 'text-gray-300 hover:bg-navy-800 hover:text-white'
                 }`
               }
+              data-tour={`nav-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
             >
               <link.icon className="w-5 h-5" />
               {link.label}

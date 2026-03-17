@@ -142,14 +142,14 @@ export default function AdminDashboard() {
     <div>
       <div className="page-header">
         <h1 className="page-title">Opportunities</h1>
-        <Link to="/admin/opportunities/new" className="btn-primary">
+        <Link to="/admin/opportunities/new" className="btn-primary" data-tour="new-opportunity-btn">
           <Plus className="w-4 h-4" />
           New Opportunity
         </Link>
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit" data-tour="filter-tabs">
         {['All', ...STATUSES].map(status => (
           <button
             key={status}
