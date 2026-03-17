@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 import { Package, ArrowLeft } from 'lucide-react';
 
 export default function ResetPassword() {
@@ -10,10 +11,26 @@ export default function ResetPassword() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const { resetPassword, updatePassword, session } = useAuth();
+  const [isRecovery, setIsRecovery] = useState(false);
+  const { resetPassword, updatePassword } = useAuth();
 
-  // If user arrived via reset link (has active session from recovery), show new password form
-  const isRecovery = !!session && window.location.hash.includes('type=recovery');
+  // Listen for the PASSWORD_RECOVERY event from Supabase
+  useEffect(() => {
+    // Check if URL hash contains recovery tokens (Supabase redirects with hash)
+    const hash = window.location.hash;
+    if (hash && (hash.includes('type=recovery') || hash.includes('type=magiclink'))) {
+      // Supabase client will auto-exchange the token; listen for the event
+      setIsRecovery(true);
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovery(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleResetRequest = async (e: React.FormEvent) => {
     e.preventDefault();
