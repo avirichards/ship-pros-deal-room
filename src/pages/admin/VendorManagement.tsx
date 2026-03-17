@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Profile } from '../../lib/types';
 import { useToast } from '../../components/ui/Toast';
-import { Users, UserPlus, X, Mail, Phone, Building } from 'lucide-react';
+import { Users, UserPlus, X, Mail, Phone, Building, Edit2, Trash2, Send } from 'lucide-react';
 
 export default function VendorManagement() {
   const { toast } = useToast();
@@ -10,6 +10,8 @@ export default function VendorManagement() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<Profile | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Form state
   const [fullName, setFullName] = useState('');
@@ -32,34 +34,102 @@ export default function VendorManagement() {
     setLoading(false);
   }
 
-  async function handleAddVendor(e: React.FormEvent) {
+  const openEditModal = (vendor: Profile) => {
+    setEditingVendor(vendor);
+    setFullName(vendor.full_name || '');
+    setEmail(vendor.email || '');
+    setCompany(vendor.company || '');
+    setPhone(vendor.phone || '');
+    setShowModal(true);
+  };
+
+  const openAddModal = () => {
+    setEditingVendor(null);
+    setFullName('');
+    setEmail('');
+    setCompany('');
+    setPhone('');
+    setShowModal(true);
+  };
+
+  async function handleSaveVendor(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
 
     try {
-      // Call the invite-vendor edge function
-      const { data, error } = await supabase.functions.invoke('invite-vendor', {
-        body: {
-          email: email.trim(),
-          full_name: fullName.trim(),
-          company: company.trim(),
-          phone: phone.trim(),
-        },
-      });
+      if (editingVendor) {
+        // Update existing vendor using our manage-vendor edge function
+        const { data, error } = await supabase.functions.invoke('manage-vendor', {
+          body: {
+            action: 'update',
+            vendor_id: editingVendor.id,
+            email: email.trim(),
+            full_name: fullName.trim(),
+            company: company.trim(),
+            phone: phone.trim(),
+          },
+        });
+        if (error) throw error;
+        toast('Vendor updated successfully!');
+      } else {
+        // Call the invite-vendor edge function
+        const { data, error } = await supabase.functions.invoke('invite-vendor', {
+          body: {
+            email: email.trim(),
+            full_name: fullName.trim(),
+            company: company.trim(),
+            phone: phone.trim(),
+          },
+        });
+        if (error) throw error;
+        toast('Vendor invited successfully!');
+      }
 
-      if (error) throw error;
-
-      toast('Vendor invited successfully!');
       setShowModal(false);
-      setFullName('');
-      setEmail('');
-      setCompany('');
-      setPhone('');
       fetchVendors();
     } catch (err: any) {
-      toast(err.message || 'Failed to invite vendor', 'error');
+      toast(err.message || 'Failed to save vendor', 'error');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDeleteVendor(vendor: Profile) {
+    if (!window.confirm(`Are you sure you want to completely delete ${vendor.full_name || vendor.email}?`)) {
+      return;
+    }
+    
+    setActionLoading(`delete-${vendor.id}`);
+    try {
+      const { error } = await supabase.functions.invoke('manage-vendor', {
+        body: { action: 'delete', vendor_id: vendor.id },
+      });
+      if (error) throw error;
+      toast('Vendor deleted successfully');
+      setVendors(prev => prev.filter(v => v.id !== vendor.id));
+    } catch (err: any) {
+      toast(err.message || 'Failed to delete vendor', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleResendInvite(vendor: Profile) {
+    if (!window.confirm(`Are you sure you want to resend the invite to ${vendor.email}?\n\nThis will generate a new temporary password and email it to them.`)) {
+      return;
+    }
+
+    setActionLoading(`resend-${vendor.id}`);
+    try {
+      const { error } = await supabase.functions.invoke('manage-vendor', {
+        body: { action: 'resend-invite', vendor_id: vendor.id },
+      });
+      if (error) throw error;
+      toast(`Invite resent to ${vendor.email}`);
+    } catch (err: any) {
+      toast(err.message || 'Failed to resend invite', 'error');
+    } finally {
+      setActionLoading(null);
     }
   }
 
@@ -71,7 +141,7 @@ export default function VendorManagement() {
     <div>
       <div className="page-header">
         <h1 className="page-title">Vendor Management</h1>
-        <button onClick={() => setShowModal(true)} className="btn-primary">
+        <button onClick={openAddModal} className="btn-primary">
           <UserPlus className="w-4 h-4" />
           Add Vendor
         </button>
@@ -86,7 +156,7 @@ export default function VendorManagement() {
           <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-1">No vendors yet</h3>
           <p className="text-sm text-gray-500 mb-6">Add your first vendor to get started</p>
-          <button onClick={() => setShowModal(true)} className="btn-primary">
+          <button onClick={openAddModal} className="btn-primary">
             <UserPlus className="w-4 h-4" />
             Add Vendor
           </button>
@@ -101,6 +171,7 @@ export default function VendorManagement() {
                 <th className="px-6 py-3">Email</th>
                 <th className="px-6 py-3">Phone</th>
                 <th className="px-6 py-3">Joined</th>
+                <th className="px-6 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -111,6 +182,33 @@ export default function VendorManagement() {
                   <td className="px-6 py-4 text-sm text-gray-600">{vendor.email}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{vendor.phone || '—'}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">{formatDate(vendor.created_at)}</td>
+                  <td className="px-6 py-4 text-sm text-right font-medium">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleResendInvite(vendor)}
+                        disabled={actionLoading === `resend-${vendor.id}`}
+                        className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors disabled:opacity-50"
+                        title="Resend Invite"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openEditModal(vendor)}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="Edit Vendor"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteVendor(vendor)}
+                        disabled={actionLoading === `delete-${vendor.id}`}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                        title="Delete Vendor"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -118,19 +216,21 @@ export default function VendorManagement() {
         </div>
       )}
 
-      {/* Add Vendor Modal */}
+      {/* Add/Edit Vendor Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowModal(false)} />
           <div className="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-navy-950">Add New Vendor</h2>
+              <h2 className="text-lg font-semibold text-navy-950">
+                {editingVendor ? 'Edit Vendor' : 'Add New Vendor'}
+              </h2>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddVendor} className="space-y-4">
+            <form onSubmit={handleSaveVendor} className="space-y-4">
               <div>
                 <label htmlFor="vendorName" className="block text-sm font-medium text-gray-700 mb-1">
                   Full Name <span className="text-red-500">*</span>
@@ -206,7 +306,7 @@ export default function VendorManagement() {
                   Cancel
                 </button>
                 <button type="submit" disabled={saving} className="btn-primary flex-1">
-                  {saving ? 'Inviting...' : 'Send Invite'}
+                  {saving ? 'Saving...' : editingVendor ? 'Save Changes' : 'Send Invite'}
                 </button>
               </div>
             </form>

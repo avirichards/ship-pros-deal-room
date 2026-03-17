@@ -11,6 +11,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import CreateOpportunity from './pages/admin/CreateOpportunity';
 import AdminOpportunityDetail from './pages/admin/OpportunityDetail';
 import VendorManagement from './pages/admin/VendorManagement';
+import AdminSettings from './pages/admin/Settings';
 import VendorDashboard from './pages/vendor/Dashboard';
 import VendorOpportunityDetail from './pages/vendor/OpportunityDetail';
 
@@ -41,6 +42,7 @@ function App() {
               <Route path="/admin/opportunities/:id" element={<AdminOpportunityDetail />} />
               <Route path="/admin/opportunities/:id/edit" element={<CreateOpportunity />} />
               <Route path="/admin/vendors" element={<VendorManagement />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
             </Route>
 
             {/* Vendor routes */}
