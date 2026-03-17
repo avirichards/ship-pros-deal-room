@@ -11,6 +11,8 @@ export default function VendorManagement() {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Profile | null>(null);
+  const [vendorToDelete, setVendorToDelete] = useState<Profile | null>(null);
+  const [vendorToResend, setVendorToResend] = useState<Profile | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Form state
@@ -94,19 +96,18 @@ export default function VendorManagement() {
     }
   }
 
-  async function handleDeleteVendor(vendor: Profile) {
-    if (!window.confirm(`Are you sure you want to completely delete ${vendor.full_name || vendor.email}?`)) {
-      return;
-    }
+  async function confirmDeleteVendor() {
+    if (!vendorToDelete) return;
     
-    setActionLoading(`delete-${vendor.id}`);
+    setActionLoading(`delete-${vendorToDelete.id}`);
     try {
       const { error } = await supabase.functions.invoke('manage-vendor', {
-        body: { action: 'delete', vendor_id: vendor.id },
+        body: { action: 'delete', vendor_id: vendorToDelete.id },
       });
       if (error) throw error;
       toast('Vendor deleted successfully');
-      setVendors(prev => prev.filter(v => v.id !== vendor.id));
+      setVendors(prev => prev.filter(v => v.id !== vendorToDelete.id));
+      setVendorToDelete(null);
     } catch (err: any) {
       toast(err.message || 'Failed to delete vendor', 'error');
     } finally {
@@ -114,18 +115,17 @@ export default function VendorManagement() {
     }
   }
 
-  async function handleResendInvite(vendor: Profile) {
-    if (!window.confirm(`Are you sure you want to resend the invite to ${vendor.email}?\n\nThis will generate a new temporary password and email it to them.`)) {
-      return;
-    }
+  async function confirmResendInvite() {
+    if (!vendorToResend) return;
 
-    setActionLoading(`resend-${vendor.id}`);
+    setActionLoading(`resend-${vendorToResend.id}`);
     try {
       const { error } = await supabase.functions.invoke('manage-vendor', {
-        body: { action: 'resend-invite', vendor_id: vendor.id },
+        body: { action: 'resend-invite', vendor_id: vendorToResend.id },
       });
       if (error) throw error;
-      toast(`Invite resent to ${vendor.email}`);
+      toast(`Invite resent to ${vendorToResend.email}`);
+      setVendorToResend(null);
     } catch (err: any) {
       toast(err.message || 'Failed to resend invite', 'error');
     } finally {
@@ -185,7 +185,7 @@ export default function VendorManagement() {
                   <td className="px-6 py-4 text-sm text-right font-medium">
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => handleResendInvite(vendor)}
+                        onClick={() => setVendorToResend(vendor)}
                         disabled={actionLoading === `resend-${vendor.id}`}
                         className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors disabled:opacity-50"
                         title="Resend Invite"
@@ -200,7 +200,7 @@ export default function VendorManagement() {
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteVendor(vendor)}
+                        onClick={() => setVendorToDelete(vendor)}
                         disabled={actionLoading === `delete-${vendor.id}`}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
                         title="Delete Vendor"
@@ -213,6 +213,66 @@ export default function VendorManagement() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Resend Invite Modal */}
+      {vendorToResend && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setVendorToResend(null)} />
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <h2 className="text-xl font-bold text-navy-950 mb-2 flex items-center gap-2">
+              <Send className="w-5 h-5 text-teal-600" />
+              Resend Invite
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to resend the invite to <span className="font-medium text-navy-950">{vendorToResend.email}</span>?
+              <br /><br />
+              This will generate a new temporary password and email it to them.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setVendorToResend(null)} className="btn-secondary">
+                Cancel
+              </button>
+              <button 
+                onClick={confirmResendInvite} 
+                disabled={!!actionLoading}
+                className="btn-primary"
+              >
+                {actionLoading === `resend-${vendorToResend.id}` ? 'Sending...' : 'Yes, Resend Invite'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Vendor Modal */}
+      {vendorToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setVendorToDelete(null)} />
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <h2 className="text-xl font-bold text-red-600 mb-2 flex items-center gap-2">
+              <Trash2 className="w-5 h-5" />
+              Delete Vendor
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to completely delete <span className="font-medium text-navy-950">{vendorToDelete.full_name || vendorToDelete.email}</span>?
+              <br /><br />
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setVendorToDelete(null)} className="btn-secondary">
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDeleteVendor} 
+                disabled={!!actionLoading}
+                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {actionLoading === `delete-${vendorToDelete.id}` ? 'Deleting...' : 'Yes, Delete Vendor'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
