@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Opportunity, OpportunityStatus, STATUSES } from '../../lib/types';
 import { Plus, FileText, Users, Calendar, Clock } from 'lucide-react';
@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const [opportunities, setOpportunities] = useState<(Opportunity & { file_count: number; interest_count: number })[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'All' | OpportunityStatus>('All');
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchOpportunities();
@@ -116,14 +117,15 @@ export default function AdminDashboard() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filtered.map(opp => (
-                <tr key={opp.id} className="hover:bg-gray-50 transition-colors">
+                <tr 
+                  key={opp.id} 
+                  onClick={() => navigate(`/admin/opportunities/${opp.id}`)}
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                >
                   <td className="px-6 py-4">
-                    <Link
-                      to={`/admin/opportunities/${opp.id}`}
-                      className="text-sm font-medium text-navy-950 hover:text-teal-500"
-                    >
+                    <div className="text-sm font-medium text-navy-950">
                       {opp.name}
-                    </Link>
+                    </div>
                     <div className="flex gap-1.5 mt-1 flex-wrap">
                       {opp.carriers.map(c => (
                         <span key={c} className="badge-carrier">{c}</span>

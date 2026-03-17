@@ -14,7 +14,7 @@ import { useState } from 'react';
 const adminLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/admin/opportunities/new', icon: FilePlus, label: 'New Opportunity' },
-  { to: '/admin/vendors', icon: Users, label: 'Vendors' },
+  { to: '/admin/vendors', icon: Users, label: 'User Management' },
 ];
 
 const vendorLinks = [

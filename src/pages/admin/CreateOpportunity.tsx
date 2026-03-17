@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/ui/Toast';
 import { CARRIERS, FulfillmentType, ShippingScope, OpportunityStatus, STATUSES } from '../../lib/types';
-import { Upload, X, FileText, ArrowLeft } from 'lucide-react';
+import { Upload, X, FileText, ArrowLeft, Bell } from 'lucide-react';
 
 export default function CreateOpportunity() {
   const { id } = useParams<{ id: string }>();
@@ -28,10 +28,18 @@ export default function CreateOpportunity() {
   const [showOther, setShowOther] = useState(false);
   const [customCarrierInput, setCustomCarrierInput] = useState('');
 
-  const standardCarriers = CARRIERS.filter(c => c !== 'Other');
-  const customCarriers = carriers.filter(c => !standardCarriers.includes(c as any) && c !== 'Other');
-  const isOtherChecked = showOther || customCarriers.length > 0;
+  // Dirty state tracking
+  const [initialValues, setInitialValues] = useState<Record<string, any> | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [showNotifyDialog, setShowNotifyDialog] = useState(false);
+  const [pendingBackTarget, setPendingBackTarget] = useState<string | null>(null);
 
+  const standardCarriers = CARRIERS.filter(c => c !== 'Other');
+  const customCarriersArr = carriers.filter(c => !standardCarriers.includes(c as any) && c !== 'Other');
+  const isOtherChecked = showOther || customCarriersArr.length > 0;
+
+  // Snapshot initial values when editing
   useEffect(() => {
     if (isEditing) {
       async function fetchOpportunity() {
@@ -48,11 +56,62 @@ export default function CreateOpportunity() {
           if (data.carriers && data.carriers.some((c: string) => !standardCarriers.includes(c as any) && c !== 'Other')) {
             setShowOther(true);
           }
+          // Save initial values for dirty checking
+          setInitialValues({
+            name: data.name,
+            description: data.description || '',
+            carriers: JSON.stringify(data.carriers || []),
+            annualVolume: data.annual_volume || '',
+            fulfillmentType: data.fulfillment_type,
+            shippingScope: data.shipping_scope || 'Domestic',
+            status: data.status,
+            deadline: data.deadline || '',
+          });
         }
       }
       fetchOpportunity();
     }
   }, [id, isEditing]);
+
+  // Check dirty state whenever form values change 
+  useEffect(() => {
+    if (!isEditing || !initialValues) return;
+    const currentValues = {
+      name,
+      description,
+      carriers: JSON.stringify(carriers),
+      annualVolume,
+      fulfillmentType,
+      shippingScope,
+      status,
+      deadline,
+    };
+    const dirty = Object.keys(currentValues).some(
+      key => (currentValues as any)[key] !== (initialValues as any)[key]
+    ) || files.length > 0;
+    setIsDirty(dirty);
+  }, [name, description, carriers, annualVolume, fulfillmentType, shippingScope, status, deadline, files, initialValues, isEditing]);
+
+  // Warn on browser back / tab close
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  const handleBack = useCallback(() => {
+    const target = isEditing ? `/admin/opportunities/${id}` : '/admin';
+    if (isDirty) {
+      setPendingBackTarget(target);
+      setShowUnsavedDialog(true);
+    } else {
+      navigate(target);
+    }
+  }, [isDirty, isEditing, id, navigate]);
 
   const handleCarrierToggle = (carrier: string) => {
     if (carrier === 'Other') {
@@ -101,13 +160,12 @@ export default function CreateOpportunity() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const handleSubmit = async (e: React.FormEvent, notify: boolean = false) => {
-    e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent | null, notify: boolean = false) => {
+    if (e) e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
 
     try {
-      // Create or update opportunity
       const oppData = {
         name: name.trim(),
         description: description.trim(),
@@ -157,9 +215,9 @@ export default function CreateOpportunity() {
           await supabase.functions.invoke('notify-vendors', {
             body: { opportunity_id: opp.id },
           });
-          toast('Opportunity created & vendors notified!');
+          toast(isEditing ? 'Changes saved & vendors notified!' : 'Opportunity created & vendors notified!');
         } catch {
-          toast('Opportunity created, but notification failed', 'error');
+          toast('Saved, but notification failed', 'error');
         }
       } else {
         toast(isEditing ? 'Opportunity updated successfully!' : 'Opportunity created successfully!');
@@ -167,9 +225,19 @@ export default function CreateOpportunity() {
 
       navigate('/admin');
     } catch (err: any) {
-      toast(err.message || 'Failed to create opportunity', 'error');
+      toast(err.message || 'Failed to save opportunity', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // For edit mode: show notify dialog instead of saving directly
+  const handleEditSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isEditing) {
+      setShowNotifyDialog(true);
+    } else {
+      handleSubmit(e, false);
     }
   };
 
@@ -177,14 +245,86 @@ export default function CreateOpportunity() {
     <div>
       <div className="page-header">
         <div className="flex items-center gap-3">
-          <button onClick={() => isEditing ? navigate(`/admin/opportunities/${id}`) : navigate('/admin')} className="btn-ghost p-2">
+          <button onClick={handleBack} className="btn-ghost p-2">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="page-title">{isEditing ? 'Edit Opportunity' : 'New Opportunity'}</h1>
         </div>
       </div>
 
-      <form onSubmit={e => handleSubmit(e, false)}>
+      {/* Unsaved Changes Dialog */}
+      {showUnsavedDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowUnsavedDialog(false)} />
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Unsaved Changes</h3>
+            <p className="text-sm text-gray-600 mb-6">You have unsaved changes. Would you like to save them before leaving?</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowUnsavedDialog(false);
+                  if (pendingBackTarget) navigate(pendingBackTarget);
+                }}
+                className="btn-secondary px-4 py-2 text-sm"
+              >
+                Discard
+              </button>
+              <button
+                onClick={() => {
+                  setShowUnsavedDialog(false);
+                  if (isEditing) {
+                    setShowNotifyDialog(true);
+                  } else {
+                    handleSubmit(null, false);
+                  }
+                }}
+                className="btn-primary px-4 py-2 text-sm"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notify Vendors Dialog (edit mode) */}
+      {showNotifyDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowNotifyDialog(false)} />
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-teal-50 rounded-lg">
+                <Bell className="w-5 h-5 text-teal-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Notify Vendors?</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">Would you like to notify all vendors about the changes to this opportunity?</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowNotifyDialog(false);
+                  handleSubmit(null, false);
+                }}
+                className="btn-secondary px-4 py-2 text-sm"
+              >
+                Save Only
+              </button>
+              <button
+                onClick={() => {
+                  setShowNotifyDialog(false);
+                  handleSubmit(null, true);
+                }}
+                className="btn-primary px-4 py-2 text-sm"
+              >
+                <Bell className="w-4 h-4" />
+                Save & Notify
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={handleEditSave}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left column — Metadata */}
           <div className="lg:col-span-2 space-y-6">
@@ -281,9 +421,9 @@ export default function CreateOpportunity() {
                         Add
                       </button>
                     </div>
-                    {customCarriers.length > 0 && (
+                    {customCarriersArr.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">
-                        {customCarriers.map(cc => (
+                        {customCarriersArr.map(cc => (
                           <span key={cc} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white border border-gray-300 text-xs font-medium text-gray-700">
                             {cc}
                             <button
@@ -463,22 +603,36 @@ export default function CreateOpportunity() {
 
             {/* Action buttons */}
             <div className="card p-6 space-y-3">
-              <button
-                type="submit"
-                disabled={saving || !name.trim()}
-                className="btn-secondary w-full"
-              >
-                {saving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save as Draft')}
-              </button>
-              {!isEditing && (
+              {isEditing ? (
                 <button
-                  type="button"
+                  type="submit"
                   disabled={saving || !name.trim()}
-                  onClick={e => handleSubmit(e, true)}
-                  className="btn-primary w-full"
+                  className={`w-full font-medium py-2.5 px-4 rounded-lg text-sm transition-all duration-200 ${
+                    isDirty
+                      ? 'bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/25 ring-2 ring-teal-300'
+                      : 'btn-secondary'
+                  }`}
                 >
-                  {saving ? 'Saving...' : 'Create & Notify Vendors'}
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </button>
+              ) : (
+                <>
+                  <button
+                    type="submit"
+                    disabled={saving || !name.trim()}
+                    className="btn-secondary w-full"
+                  >
+                    {saving ? 'Saving...' : 'Save as Draft'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={saving || !name.trim()}
+                    onClick={e => handleSubmit(e, true)}
+                    className="btn-primary w-full"
+                  >
+                    {saving ? 'Saving...' : 'Create & Notify Vendors'}
+                  </button>
+                </>
               )}
             </div>
           </div>

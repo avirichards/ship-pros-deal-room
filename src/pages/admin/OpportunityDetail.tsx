@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Opportunity, OpportunityFile, VendorInterest, VendorView, OpportunityStatus, STATUSES } from '../../lib/types';
+import { Opportunity, OpportunityFile, VendorInterest, VendorView, OpportunityStatus, STATUSES, VendorSubmission } from '../../lib/types';
 import { useToast } from '../../components/ui/Toast';
 import {
   ArrowLeft, Download, FileText, Users, Eye, Trash2,
-  Calendar, Package, Truck, Clock, Save, Globe
+  Calendar, Package, Truck, Clock, Save, Globe, Table2, Upload
 } from 'lucide-react';
+import { DataPreviewModal } from '../../components/ui/DataPreviewModal';
 
 const statusBadgeClass: Record<OpportunityStatus, string> = {
   'Open': 'badge-open', 'Quoted': 'badge-quoted',
@@ -20,26 +21,31 @@ export default function AdminOpportunityDetail() {
 
   const [opp, setOpp] = useState<Opportunity | null>(null);
   const [files, setFiles] = useState<OpportunityFile[]>([]);
+  const [submissions, setSubmissions] = useState<VendorSubmission[]>([]);
   const [interests, setInterests] = useState<VendorInterest[]>([]);
   const [views, setViews] = useState<VendorView[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'interested' | 'viewed'>('interested');
+  const [tab, setTab] = useState<'interested' | 'viewed' | 'submissions'>('interested');
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [previewFile, setPreviewFile] = useState<OpportunityFile | null>(null);
 
   useEffect(() => {
     if (id) fetchAll();
   }, [id]);
 
   async function fetchAll() {
-    const [oppRes, filesRes, interestRes, viewsRes] = await Promise.all([
+    const [oppRes, filesRes, interestRes, viewsRes, submissionsRes] = await Promise.all([
       supabase.from('opportunities').select('*').eq('id', id).single(),
       supabase.from('opportunity_files').select('*').eq('opportunity_id', id),
       supabase.from('vendor_interest').select('*, profiles(*)').eq('opportunity_id', id).order('created_at', { ascending: false }),
       supabase.from('vendor_views').select('*, profiles(*)').eq('opportunity_id', id).order('viewed_at', { ascending: false }),
+      supabase.from('vendor_submissions').select('*, profiles(*)').eq('opportunity_id', id).order('created_at', { ascending: false }),
     ]);
     if (oppRes.data) setOpp(oppRes.data as Opportunity);
     if (filesRes.data) setFiles(filesRes.data as OpportunityFile[]);
+    if (submissionsRes.data) setSubmissions(submissionsRes.data as VendorSubmission[]);
     if (interestRes.data) {
       setInterests(interestRes.data as VendorInterest[]);
       const notes: Record<string, string> = {};
@@ -50,7 +56,7 @@ export default function AdminOpportunityDetail() {
     setLoading(false);
   }
 
-  async function handleDownload(file: OpportunityFile) {
+  async function handleDownload(file: OpportunityFile | VendorSubmission) {
     const { data, error } = await supabase.storage
       .from('opportunity-files')
       .download(file.file_path);
@@ -83,11 +89,15 @@ export default function AdminOpportunityDetail() {
   }
 
   async function handleDelete() {
-    if (!confirm('Are you sure you want to delete this opportunity? This cannot be undone.')) return;
+    setShowDeleteConfirm(false);
     setDeleting(true);
     // Delete storage files first
     for (const file of files) {
       await supabase.storage.from('opportunity-files').remove([file.file_path]);
+    }
+    // Delete submission files
+    for (const sub of submissions) {
+      await supabase.storage.from('opportunity-files').remove([sub.file_path]);
     }
     const { error } = await supabase.from('opportunities').delete().eq('id', id);
     if (error) { toast('Failed to delete', 'error'); setDeleting(false); return; }
@@ -145,11 +155,31 @@ export default function AdminOpportunityDetail() {
           <button onClick={() => navigate(`/admin/opportunities/${opp.id}/edit`)} className="btn-secondary px-3 py-2 text-sm text-gray-700">
             Edit
           </button>
-          <button onClick={handleDelete} disabled={deleting} className="btn-danger">
+          <button onClick={() => setShowDeleteConfirm(true)} disabled={deleting} className="btn-danger">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Opportunity</h3>
+            <p className="text-sm text-gray-600 mb-6">Are you sure you want to delete this opportunity? All associated files and submissions will be permanently removed. This cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowDeleteConfirm(false)} className="btn-secondary px-4 py-2 text-sm">
+                Cancel
+              </button>
+              <button onClick={handleDelete} className="btn-danger px-4 py-2 text-sm">
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Metadata + Files */}
@@ -225,10 +255,18 @@ export default function AdminOpportunityDetail() {
                       <p className="text-sm font-medium text-gray-700 truncate">{file.file_name}</p>
                       <p className="text-xs text-gray-400 font-mono">{formatFileSize(file.file_size)}</p>
                     </div>
-                    <button onClick={() => handleDownload(file)} className="btn-secondary text-sm py-1.5 px-3">
-                      <Download className="w-4 h-4" />
-                      Download
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {file.file_name.toLowerCase().endsWith('.csv') && (
+                        <button onClick={() => setPreviewFile(file)} className="btn-secondary text-sm py-1.5 px-3">
+                          <Table2 className="w-4 h-4" />
+                          <span className="hidden sm:inline">Preview</span>
+                        </button>
+                      )}
+                      <button onClick={() => handleDownload(file)} className="btn-secondary text-sm py-1.5 px-3">
+                        <Download className="w-4 h-4" />
+                        <span className="hidden sm:inline">Download</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -261,6 +299,17 @@ export default function AdminOpportunityDetail() {
               >
                 <Eye className="w-4 h-4 inline mr-1.5" />
                 Viewed ({views.length})
+              </button>
+              <button
+                onClick={() => setTab('submissions')}
+                className={`flex-1 px-4 py-3 text-sm font-medium text-center border-b-2 transition-colors ${
+                  tab === 'submissions'
+                    ? 'border-teal-500 text-teal-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Upload className="w-4 h-4 inline mr-1.5" />
+                Submits ({submissions.length})
               </button>
             </div>
 
@@ -304,7 +353,7 @@ export default function AdminOpportunityDetail() {
                     ))}
                   </div>
                 )
-              ) : (
+              ) : tab === 'viewed' ? (
                 views.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-4">No views yet</p>
                 ) : (
@@ -324,11 +373,53 @@ export default function AdminOpportunityDetail() {
                     ))}
                   </div>
                 )
+              ) : (
+                submissions.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">No submissions yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {submissions.map(sub => (
+                      <div key={sub.id} className="border border-gray-200 rounded-md p-3 bg-gray-50">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                           <div className="flex items-center gap-2">
+                             <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-xs uppercase flex-shrink-0">
+                               {((sub as any).profiles?.full_name || (sub as any).profiles?.company || 'U')[0]}
+                             </div>
+                             <div>
+                               <p className="text-sm font-medium text-gray-900">
+                                 {(sub as any).profiles?.full_name || 'Unknown'}
+                               </p>
+                               <p className="text-xs text-gray-500">
+                                 {(sub as any).profiles?.company || (sub as any).profiles?.email}
+                               </p>
+                             </div>
+                           </div>
+                           <span className="text-xs text-gray-400 sm:self-start">{formatDate(sub.created_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-white border border-gray-100 rounded">
+                           <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                           <div className="flex-1 min-w-0">
+                             <p className="text-sm text-gray-700 truncate">{sub.file_name}</p>
+                             <p className="text-xs text-gray-400 font-mono">{formatFileSize(sub.file_size)}</p>
+                           </div>
+                           <button onClick={() => handleDownload(sub)} className="btn-secondary text-xs py-1 px-2 flex-shrink-0">
+                             <Download className="w-3 h-3 mr-1 inline" />
+                             Get
+                           </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {previewFile && (
+        <DataPreviewModal file={previewFile as OpportunityFile} onClose={() => setPreviewFile(null)} />
+      )}
     </div>
   );
 }

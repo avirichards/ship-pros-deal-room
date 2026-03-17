@@ -7,6 +7,7 @@ import { AppLayout } from './components/layout/AppLayout';
 
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
+import ChangePassword from './pages/ChangePassword';
 import AdminDashboard from './pages/admin/Dashboard';
 import CreateOpportunity from './pages/admin/CreateOpportunity';
 import AdminOpportunityDetail from './pages/admin/OpportunityDetail';
@@ -31,6 +32,9 @@ function App() {
             {/* Public */}
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Forced Password Reset */}
+            <Route path="/change-password" element={<ProtectedRoute allowPasswordChange><ChangePassword /></ProtectedRoute>} />
 
             {/* Root redirect */}
             <Route path="/" element={<ProtectedRoute><RootRedirect /></ProtectedRoute>} />

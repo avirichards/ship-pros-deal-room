@@ -17,6 +17,8 @@ export interface Profile {
   company: string;
   phone: string;
   role: UserRole;
+  requires_password_change?: boolean;
+  receive_submission_notifications?: boolean;
   created_at: string;
 }
 
@@ -61,6 +63,18 @@ export interface VendorView {
   opportunity_id: string;
   vendor_id: string;
   viewed_at: string;
+  // Joined fields
+  profiles?: Profile;
+}
+
+export interface VendorSubmission {
+  id: string;
+  opportunity_id: string;
+  vendor_id: string;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  created_at: string;
   // Joined fields
   profiles?: Profile;
 }

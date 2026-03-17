@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function resetPassword(email: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: 'https://ship-pros-deal-room.vercel.app/reset-password',
     });
     return { error: error as Error | null };
   }

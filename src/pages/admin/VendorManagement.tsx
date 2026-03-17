@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Profile } from '../../lib/types';
+import { Profile, UserRole } from '../../lib/types';
 import { useToast } from '../../components/ui/Toast';
-import { Users, UserPlus, X, Mail, Phone, Building, Edit2, Trash2, Send } from 'lucide-react';
+import { Users, UserPlus, X, Mail, Phone, Building, Edit2, Trash2, Send, Shield, Bell, BellOff } from 'lucide-react';
 
 export default function VendorManagement() {
   const { toast } = useToast();
-  const [vendors, setVendors] = useState<Profile[]>([]);
+  const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -20,19 +20,19 @@ export default function VendorManagement() {
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
   const [phone, setPhone] = useState('');
+  const [role, setRole] = useState<UserRole>('vendor');
 
   useEffect(() => {
-    fetchVendors();
+    fetchUsers();
   }, []);
 
-  async function fetchVendors() {
+  async function fetchUsers() {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('role', 'vendor')
       .order('created_at', { ascending: false });
 
-    if (!error && data) setVendors(data as Profile[]);
+    if (!error && data) setUsers(data as Profile[]);
     setLoading(false);
   }
 
@@ -42,6 +42,7 @@ export default function VendorManagement() {
     setEmail(vendor.email || '');
     setCompany(vendor.company || '');
     setPhone(vendor.phone || '');
+    setRole(vendor.role);
     setShowModal(true);
   };
 
@@ -51,6 +52,7 @@ export default function VendorManagement() {
     setEmail('');
     setCompany('');
     setPhone('');
+    setRole('vendor');
     setShowModal(true);
   };
 
@@ -69,10 +71,11 @@ export default function VendorManagement() {
             full_name: fullName.trim(),
             company: company.trim(),
             phone: phone.trim(),
+            role: role,
           },
         });
         if (error) throw error;
-        toast('Vendor updated successfully!');
+        toast('User updated successfully!');
       } else {
         // Call the invite-vendor edge function
         const { data, error } = await supabase.functions.invoke('invite-vendor', {
@@ -81,16 +84,17 @@ export default function VendorManagement() {
             full_name: fullName.trim(),
             company: company.trim(),
             phone: phone.trim(),
+            role: role,
           },
         });
         if (error) throw error;
-        toast('Vendor invited successfully!');
+        toast('User invited successfully!');
       }
 
       setShowModal(false);
-      fetchVendors();
+      fetchUsers();
     } catch (err: any) {
-      toast(err.message || 'Failed to save vendor', 'error');
+      toast(err.message || 'Failed to save user', 'error');
     } finally {
       setSaving(false);
     }
@@ -105,11 +109,11 @@ export default function VendorManagement() {
         body: { action: 'delete', vendor_id: vendorToDelete.id },
       });
       if (error) throw error;
-      toast('Vendor deleted successfully');
-      setVendors(prev => prev.filter(v => v.id !== vendorToDelete.id));
+      toast('User deleted successfully');
+      setUsers(prev => prev.filter(v => v.id !== vendorToDelete.id));
       setVendorToDelete(null);
     } catch (err: any) {
-      toast(err.message || 'Failed to delete vendor', 'error');
+      toast(err.message || 'Failed to delete user', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -137,13 +141,27 @@ export default function VendorManagement() {
     month: 'short', day: 'numeric', year: 'numeric'
   });
 
+  async function toggleNotifications(user: Profile) {
+    const newValue = !user.receive_submission_notifications;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ receive_submission_notifications: newValue })
+      .eq('id', user.id);
+    if (error) {
+      toast('Failed to update notification settings', 'error');
+      return;
+    }
+    setUsers(prev => prev.map(u => u.id === user.id ? { ...u, receive_submission_notifications: newValue } : u));
+    toast(newValue ? `${user.full_name || user.email} will now receive submission notifications` : `${user.full_name || user.email} will no longer receive submission notifications`);
+  }
+
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Vendor Management</h1>
+        <h1 className="page-title">User Management</h1>
         <button onClick={openAddModal} className="btn-primary">
           <UserPlus className="w-4 h-4" />
-          Add Vendor
+          Add User
         </button>
       </div>
 
@@ -151,14 +169,14 @@ export default function VendorManagement() {
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
         </div>
-      ) : vendors.length === 0 ? (
+      ) : users.length === 0 ? (
         <div className="text-center py-16">
           <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No vendors yet</h3>
-          <p className="text-sm text-gray-500 mb-6">Add your first vendor to get started</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-1">No users yet</h3>
+          <p className="text-sm text-gray-500 mb-6">Add your first user to get started</p>
           <button onClick={openAddModal} className="btn-primary">
             <UserPlus className="w-4 h-4" />
-            Add Vendor
+            Add User
           </button>
         </div>
       ) : (
@@ -167,6 +185,8 @@ export default function VendorManagement() {
             <thead>
               <tr className="table-header">
                 <th className="px-6 py-3">Name</th>
+                <th className="px-6 py-3">Role</th>
+                <th className="px-6 py-3">Notifications</th>
                 <th className="px-6 py-3">Company</th>
                 <th className="px-6 py-3">Email</th>
                 <th className="px-6 py-3">Phone</th>
@@ -175,35 +195,59 @@ export default function VendorManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {vendors.map(vendor => (
-                <tr key={vendor.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{vendor.full_name || '—'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{vendor.company || '—'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{vendor.email}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{vendor.phone || '—'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{formatDate(vendor.created_at)}</td>
+              {users.map(user => (
+                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{user.full_name || '—'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize ${
+                      user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {user.role === 'admin' ? (
+                      <button
+                        onClick={() => toggleNotifications(user)}
+                        className={`p-1.5 rounded transition-colors ${
+                          user.receive_submission_notifications
+                            ? 'text-teal-600 bg-teal-50 hover:bg-teal-100'
+                            : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100'
+                        }`}
+                        title={user.receive_submission_notifications ? 'Receiving submission notifications (click to disable)' : 'Not receiving submission notifications (click to enable)'}
+                      >
+                        {user.receive_submission_notifications ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                      </button>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{user.company || '—'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{user.phone || '—'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{formatDate(user.created_at)}</td>
                   <td className="px-6 py-4 text-sm text-right font-medium">
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => setVendorToResend(vendor)}
-                        disabled={actionLoading === `resend-${vendor.id}`}
+                        onClick={() => setVendorToResend(user)}
+                        disabled={actionLoading === `resend-${user.id}`}
                         className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors disabled:opacity-50"
                         title="Resend Invite"
                       >
                         <Send className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => openEditModal(vendor)}
+                        onClick={() => openEditModal(user)}
                         className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        title="Edit Vendor"
+                        title="Edit User"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => setVendorToDelete(vendor)}
-                        disabled={actionLoading === `delete-${vendor.id}`}
+                        onClick={() => setVendorToDelete(user)}
+                        disabled={actionLoading === `delete-${user.id}`}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                        title="Delete Vendor"
+                        title="Delete User"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -246,14 +290,14 @@ export default function VendorManagement() {
         </div>
       )}
 
-      {/* Delete Vendor Modal */}
+      {/* Delete User Modal */}
       {vendorToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setVendorToDelete(null)} />
           <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
             <h2 className="text-xl font-bold text-red-600 mb-2 flex items-center gap-2">
               <Trash2 className="w-5 h-5" />
-              Delete Vendor
+              Delete User
             </h2>
             <p className="text-gray-600 mb-6">
               Are you sure you want to completely delete <span className="font-medium text-navy-950">{vendorToDelete.full_name || vendorToDelete.email}</span>?
@@ -269,21 +313,21 @@ export default function VendorManagement() {
                 disabled={!!actionLoading}
                 className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {actionLoading === `delete-${vendorToDelete.id}` ? 'Deleting...' : 'Yes, Delete Vendor'}
+                {actionLoading === `delete-${vendorToDelete.id}` ? 'Deleting...' : 'Yes, Delete User'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Add/Edit Vendor Modal */}
+      {/* Add/Edit User Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowModal(false)} />
           <div className="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-navy-950">
-                {editingVendor ? 'Edit Vendor' : 'Add New Vendor'}
+                {editingVendor ? 'Edit User' : 'Add New User'}
               </h2>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
@@ -291,21 +335,41 @@ export default function VendorManagement() {
             </div>
 
             <form onSubmit={handleSaveVendor} className="space-y-4">
-              <div>
-                <label htmlFor="vendorName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    id="vendorName"
-                    type="text"
-                    value={fullName}
-                    onChange={e => setFullName(e.target.value)}
-                    className="input-field pl-9"
-                    placeholder="John Doe"
-                    required
-                  />
-                  <Users className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="vendorName" className="block text-sm font-medium text-gray-700 mb-1">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="vendorName"
+                      type="text"
+                      value={fullName}
+                      onChange={e => setFullName(e.target.value)}
+                      className="input-field pl-9"
+                      placeholder="John Doe"
+                      required
+                    />
+                    <Users className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="userRole" className="block text-sm font-medium text-gray-700 mb-1">
+                    Account Role
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="userRole"
+                      value={role}
+                      onChange={e => setRole(e.target.value as UserRole)}
+                      className="input-field pl-9 appearance-none"
+                    >
+                      <option value="vendor">Vendor</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <Shield className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  </div>
                 </div>
               </div>
 

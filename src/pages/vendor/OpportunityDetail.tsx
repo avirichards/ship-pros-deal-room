@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/ui/Toast';
-import { Opportunity, OpportunityFile } from '../../lib/types';
+import { Opportunity, OpportunityFile, VendorSubmission } from '../../lib/types';
+import { DataPreviewModal } from '../../components/ui/DataPreviewModal';
 import {
   ArrowLeft, Download, FileText, Clock,
-  Calendar, Package, Truck, CheckCircle, Upload, Check, Globe, Heart
+  Calendar, Package, Truck, CheckCircle, Upload, Check, Globe, Heart, Table2, X
 } from 'lucide-react';
 
 export default function VendorOpportunityDetail() {
@@ -17,24 +18,33 @@ export default function VendorOpportunityDetail() {
 
   const [opp, setOpp] = useState<Opportunity | null>(null);
   const [files, setFiles] = useState<OpportunityFile[]>([]);
+  const [submissions, setSubmissions] = useState<VendorSubmission[]>([]);
   const [interested, setInterested] = useState(false);
   const [loading, setLoading] = useState(true);
   const [expressing, setExpressing] = useState(false);
+  const [previewFile, setPreviewFile] = useState<OpportunityFile | null>(null);
+
+  const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (id) fetchAll();
   }, [id]);
 
   async function fetchAll() {
-    const [oppRes, filesRes, interestRes] = await Promise.all([
+    const [oppRes, filesRes, interestRes, submissionsRes] = await Promise.all([
       supabase.from('opportunities').select('*').eq('id', id).single(),
       supabase.from('opportunity_files').select('*').eq('opportunity_id', id),
       supabase.from('vendor_interest').select('id').eq('opportunity_id', id).eq('vendor_id', user!.id),
+      supabase.from('vendor_submissions').select('*').eq('opportunity_id', id).eq('vendor_id', user!.id).order('created_at', { ascending: false }),
     ]);
 
     if (oppRes.data) setOpp(oppRes.data as Opportunity);
     if (filesRes.data) setFiles(filesRes.data as OpportunityFile[]);
     if (interestRes.data && interestRes.data.length > 0) setInterested(true);
+    if (submissionsRes.data) setSubmissions(submissionsRes.data as VendorSubmission[]);
 
     // Record view
     await supabase.from('vendor_views').insert({
@@ -64,7 +74,7 @@ export default function VendorOpportunityDetail() {
     setExpressing(false);
   }
 
-  async function handleDownload(file: OpportunityFile) {
+  async function handleDownload(file: OpportunityFile | VendorSubmission) {
     const { data, error } = await supabase.storage
       .from('opportunity-files')
       .download(file.file_path);
@@ -76,6 +86,73 @@ export default function VendorOpportunityDetail() {
     a.click();
     URL.revokeObjectURL(url);
   }
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
+    if (e.type === 'dragleave') setDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files) {
+      setUploadingFiles(prev => [...prev, ...Array.from(e.dataTransfer.files!)]);
+    }
+  };
+
+  const removeUploadingFile = (index: number) => {
+    setUploadingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const submitFiles = async () => {
+    if (uploadingFiles.length === 0) return;
+    setIsUploading(true);
+    
+    let uploadedCount = 0;
+
+    for (const file of uploadingFiles) {
+      const filePath = `submissions/${id}/${user!.id}/${crypto.randomUUID()}-${file.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('opportunity-files')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('File upload error:', uploadError);
+        toast(`Failed to upload ${file.name}`, 'error');
+        continue;
+      }
+
+      const { data: submissionData, error: dbError } = await supabase.from('vendor_submissions').insert({
+        opportunity_id: id,
+        vendor_id: user!.id,
+        file_name: file.name,
+        file_path: filePath,
+        file_size: file.size,
+      }).select().single();
+
+      if (dbError) {
+        console.error('DB Insert error:', dbError);
+      } else if (submissionData) {
+        setSubmissions(prev => [submissionData as VendorSubmission, ...prev]);
+        uploadedCount++;
+        
+        supabase.functions.invoke('notify-admin-submission', {
+          body: { submission_id: submissionData.id },
+        }).catch(err => console.error("Notification failed:", err));
+      }
+    }
+
+    if (uploadedCount > 0) {
+      toast(`Successfully uploaded ${uploadedCount} file${uploadedCount > 1 ? 's' : ''}`);
+    }
+    
+    setUploadingFiles([]);
+    setIsUploading(false);
+  };
 
   const formatDate = (date: string) => new Date(date).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric'
@@ -102,7 +179,7 @@ export default function VendorOpportunityDetail() {
   const deadlineInfo = getDeadlineInfo();
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/vendor')} className="btn-ghost p-2">
           <ArrowLeft className="w-5 h-5" />
@@ -122,7 +199,7 @@ export default function VendorOpportunityDetail() {
       )}
 
       {/* Metadata */}
-      <div className="card p-6 mb-6">
+      <div className="card p-6">
         {opp.description && (
           <p className="text-sm text-gray-600 mb-5">{opp.description}</p>
         )}
@@ -171,35 +248,6 @@ export default function VendorOpportunityDetail() {
         </div>
       </div>
 
-      {/* Files */}
-      <div className="card p-6 mb-6">
-        <h2 className="section-title">
-          <span className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-gray-400" />
-            Attachments ({files.length})
-          </span>
-        </h2>
-        {files.length === 0 ? (
-          <p className="text-sm text-gray-400">No files attached to this opportunity</p>
-        ) : (
-          <div className="space-y-2">
-            {files.map(file => (
-              <div key={file.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
-                <FileText className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-700 truncate">{file.file_name}</p>
-                  <p className="text-xs text-gray-400 font-mono">{formatFileSize(file.file_size)}</p>
-                </div>
-                <button onClick={() => handleDownload(file)} className="btn-secondary text-sm py-1.5 px-3">
-                  <Download className="w-4 h-4" />
-                  Download
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Interest Button */}
       <div className="card p-6">
         {interested ? (
@@ -218,6 +266,140 @@ export default function VendorOpportunityDetail() {
           </button>
         )}
       </div>
+
+      {/* Files from Admin */}
+      <div className="card p-6">
+        <h2 className="section-title">
+          <span className="flex items-center gap-2">
+            <Download className="w-5 h-5 text-gray-400" />
+            Opportunity Files ({files.length})
+          </span>
+        </h2>
+        <p className="text-sm text-gray-500 mb-4">Files provided by the prospective client.</p>
+        {files.length === 0 ? (
+          <p className="text-sm text-gray-400">No files attached to this opportunity</p>
+        ) : (
+          <div className="space-y-2">
+            {files.map(file => (
+              <div key={file.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+                <FileText className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-700 truncate">{file.file_name}</p>
+                  <p className="text-xs text-gray-400 font-mono">{formatFileSize(file.file_size)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {file.file_name.toLowerCase().endsWith('.csv') && (
+                    <button onClick={() => setPreviewFile(file)} className="btn-secondary text-sm py-1.5 px-3">
+                      <Table2 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Preview</span>
+                    </button>
+                  )}
+                  <button onClick={() => handleDownload(file)} className="btn-secondary text-sm py-1.5 px-3">
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline">Download</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Vendor File Submissions */}
+      <div className="card p-6">
+        <h2 className="section-title">
+          <span className="flex items-center gap-2">
+            <Upload className="w-5 h-5 text-gray-400" />
+            Your Submissions ({submissions.length})
+          </span>
+        </h2>
+        <p className="text-sm text-gray-500 mb-4">Upload your proposals, data sheets, and quotes here.</p>
+        
+        <div
+          onDragEnter={handleDrag}
+          onDragOver={handleDrag}
+          onDragLeave={handleDrag}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-lg p-6 mb-4 text-center cursor-pointer transition-colors ${
+            dragActive
+              ? 'border-teal-500 bg-teal-50'
+              : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+          }`}
+        >
+          <Upload className={`w-8 h-8 mx-auto mb-2 ${dragActive ? 'text-teal-500' : 'text-gray-400'}`} />
+          <p className="text-sm text-gray-600 mb-1">
+            Drop files here or <span className="text-teal-500 font-medium">browse</span>
+          </p>
+          <p className="text-xs text-gray-400">CSV, Excel, PDF, or any file type</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={e => {
+              if (e.target.files) {
+                setUploadingFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+              }
+            }}
+            className="hidden"
+          />
+        </div>
+
+        {uploadingFiles.length > 0 && (
+          <div className="mb-4">
+            <div className="space-y-2 mb-3">
+              {uploadingFiles.map((file, i) => (
+                <div key={i} className="flex items-center gap-3 p-2 bg-white border border-gray-200 rounded-md">
+                  <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-700 truncate">{file.name}</p>
+                    <p className="text-xs text-gray-400 font-mono">{formatFileSize(file.size)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeUploadingFile(i)}
+                    className="text-gray-400 hover:text-red-500"
+                    disabled={isUploading}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={submitFiles}
+              disabled={isUploading || uploadingFiles.length === 0}
+              className="btn-primary w-full"
+            >
+              {isUploading ? 'Uploading...' : `Submit ${uploadingFiles.length} File${uploadingFiles.length > 1 ? 's' : ''}`}
+            </button>
+          </div>
+        )}
+
+        {submissions.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Previously Uploaded</h4>
+            {submissions.map(sub => (
+              <div key={sub.id} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-md">
+                <FileText className="w-5 h-5 text-teal-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-700 truncate">{sub.file_name}</p>
+                  <p className="text-xs text-gray-400">
+                    Uploaded {formatDate(sub.created_at)} • <span className="font-mono">{formatFileSize(sub.file_size)}</span>
+                  </p>
+                </div>
+                <button onClick={() => handleDownload(sub)} className="btn-secondary text-sm py-1.5 px-3 whitespace-nowrap">
+                  <Download className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {previewFile && (
+        <DataPreviewModal file={previewFile as OpportunityFile} onClose={() => setPreviewFile(null)} />
+      )}
     </div>
   );
 }

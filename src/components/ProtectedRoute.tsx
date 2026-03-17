@@ -1,8 +1,8 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+export function ProtectedRoute({ children, allowPasswordChange = false }: { children: React.ReactNode, allowPasswordChange?: boolean }) {
+  const { user, profile, loading } = useAuth();
 
   if (loading) {
     return (
@@ -14,6 +14,16 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // If the user's profile requires a password reset, force them to the change-password page
+  if (!allowPasswordChange && profile?.requires_password_change) {
+    return <Navigate to="/change-password" replace />;
+  }
+
+  // Prevent users from accessing change-password if they don't need to (and avoid loop)
+  if (allowPasswordChange && profile && !profile.requires_password_change) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
