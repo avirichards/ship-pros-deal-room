@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Profile, UserRole } from '../../lib/types';
 import { useToast } from '../../components/ui/Toast';
-import { Users, UserPlus, X, Mail, Phone, Building, Edit2, Trash2, Send, Shield, Bell, BellOff, ChevronDown, ChevronRight } from 'lucide-react';
+import { Users, UserPlus, X, Mail, Phone, Building, Edit2, Trash2, Send, Shield, Bell, BellOff, ChevronDown, ChevronRight, Search } from 'lucide-react';
 
 export default function VendorManagement() {
   const { toast } = useToast();
@@ -15,6 +15,7 @@ export default function VendorManagement() {
   const [vendorToResend, setVendorToResend] = useState<Profile | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [collapsedCompanies, setCollapsedCompanies] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form state
   const [fullName, setFullName] = useState('');
@@ -55,12 +56,24 @@ export default function VendorManagement() {
     );
   }, [company, existingCompanies]);
 
+  // Filter users by search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users;
+    const q = searchQuery.toLowerCase();
+    return users.filter(u =>
+      (u.full_name || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.company || '').toLowerCase().includes(q) ||
+      (u.phone || '').toLowerCase().includes(q)
+    );
+  }, [users, searchQuery]);
+
   // Group users by company
   const groupedUsers = useMemo(() => {
     const groups: { company: string; users: Profile[] }[] = [];
     const companyMap = new Map<string, Profile[]>();
 
-    for (const user of users) {
+    for (const user of filteredUsers) {
       const companyName = user.company?.trim() || 'No Company';
       if (!companyMap.has(companyName)) {
         companyMap.set(companyName, []);
@@ -80,7 +93,7 @@ export default function VendorManagement() {
     }
 
     return groups;
-  }, [users]);
+  }, [filteredUsers]);
 
   const toggleCompanyCollapse = (company: string) => {
     setCollapsedCompanies(prev => {
@@ -276,6 +289,28 @@ export default function VendorManagement() {
           <UserPlus className="w-4 h-4" />
           Add User
         </button>
+      </div>
+
+      {/* Search bar */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search by name, email, company, or phone..."
+            className="input-field pl-9 pr-9"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
