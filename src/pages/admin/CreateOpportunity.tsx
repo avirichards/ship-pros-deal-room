@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/ui/Toast';
 import { CARRIERS, FulfillmentType, SHIPPING_REGIONS, ShippingRegion, OpportunityStatus, STATUSES } from '../../lib/types';
-import { Upload, X, FileText, ArrowLeft, Bell } from 'lucide-react';
+import { Upload, X, FileText, ArrowLeft, Bell, Trash2 } from 'lucide-react';
 
 export default function CreateOpportunity() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +27,15 @@ export default function CreateOpportunity() {
   const [dragActive, setDragActive] = useState(false);
   const [showOther, setShowOther] = useState(false);
   const [customCarrierInput, setCustomCarrierInput] = useState('');
+
+  // Existing files from DB (when editing)
+  interface ExistingFile {
+    id: string;
+    file_name: string;
+    file_path: string;
+    file_size: number;
+  }
+  const [existingFiles, setExistingFiles] = useState<ExistingFile[]>([]);
 
   // Dirty state tracking
   const [initialValues, setInitialValues] = useState<Record<string, any> | null>(null);
@@ -67,6 +76,13 @@ export default function CreateOpportunity() {
             status: data.status,
             deadline: data.deadline || '',
           });
+
+          // Fetch existing files
+          const { data: filesData } = await supabase
+            .from('opportunity_files')
+            .select('id, file_name, file_path, file_size')
+            .eq('opportunity_id', id);
+          if (filesData) setExistingFiles(filesData);
         }
       }
       fetchOpportunity();
@@ -158,6 +174,21 @@ export default function CreateOpportunity() {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const removeExistingFile = async (file: ExistingFile) => {
+    try {
+      // Delete from storage
+      await supabase.storage.from('opportunity-files').remove([file.file_path]);
+      // Delete from DB
+      await supabase.from('opportunity_files').delete().eq('id', file.id);
+      // Update local state
+      setExistingFiles(prev => prev.filter(f => f.id !== file.id));
+      setIsDirty(true);
+      toast('File removed');
+    } catch (err: any) {
+      toast('Failed to remove file', 'error');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent | null, notify: boolean = false) => {
@@ -585,25 +616,56 @@ export default function CreateOpportunity() {
                 />
               </div>
 
-              {/* File list */}
-              {files.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  {files.map((file, i) => (
-                    <div key={i} className="flex items-center gap-3 p-2 bg-gray-50 rounded-md">
-                      <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-700 truncate">{file.name}</p>
-                        <p className="text-xs text-gray-400 font-mono">{formatFileSize(file.size)}</p>
+              {/* Existing files (when editing) */}
+              {existingFiles.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Current Files</p>
+                  <div className="space-y-2">
+                    {existingFiles.map(file => (
+                      <div key={file.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-md border border-gray-200">
+                        <FileText className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 truncate">{file.file_name}</p>
+                          <p className="text-xs text-gray-400 font-mono">{formatFileSize(file.file_size)}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeExistingFile(file)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          title="Remove file"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(i)}
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* New files to upload */}
+              {files.length > 0 && (
+                <div className="mt-4">
+                  {existingFiles.length > 0 && (
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">New Files</p>
+                  )}
+                  <div className="space-y-2">
+                    {files.map((file, i) => (
+                      <div key={i} className="flex items-center gap-3 p-2 bg-teal-50 rounded-md border border-teal-200">
+                        <FileText className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 truncate">{file.name}</p>
+                          <p className="text-xs text-gray-400 font-mono">{formatFileSize(file.size)}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(i)}
+                          className="text-gray-400 hover:text-red-500"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
