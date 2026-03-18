@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Opportunity, OpportunityStatus, STATUSES } from '../../lib/types';
+import { formatSpend, formatVolume } from '../../lib/format';
 import { useToast } from '../../components/ui/Toast';
 import { Plus, FileText, Users, Clock, Upload, Trash2, ChevronDown, X, Bell } from 'lucide-react';
 
@@ -445,7 +446,8 @@ export default function AdminDashboard() {
                 <th className="px-4 py-3">Opportunity</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Deadline</th>
-                <th className="px-4 py-3">Volume</th>
+                <th className="px-4 py-3">Annual Spend (est)</th>
+                <th className="px-4 py-3">Parcel Volume</th>
                 <th className="px-4 py-3">Files</th>
                 <th className="px-4 py-3">Interested</th>
                 <th className="px-4 py-3">Submissions</th>
@@ -493,7 +495,8 @@ export default function AdminDashboard() {
                       {!opp.deadline && <span className="text-gray-400 text-xs">—</span>}
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-600" onClick={() => navigate(`/admin/opportunities/${opp.id}`)}>{opp.annual_volume || '—'}</td>
+                  <td className="px-4 py-4 text-sm text-gray-600" onClick={() => navigate(`/admin/opportunities/${opp.id}`)}>{formatSpend(opp.annual_volume)}</td>
+                  <td className="px-4 py-4 text-sm text-gray-600" onClick={() => navigate(`/admin/opportunities/${opp.id}`)}>{formatVolume(opp.annual_parcel_volume)}</td>
                   <td className="px-4 py-4" onClick={() => navigate(`/admin/opportunities/${opp.id}`)}>
                     <span className="inline-flex items-center gap-1 text-sm text-gray-600">
                       <FileText className="w-3.5 h-3.5" />

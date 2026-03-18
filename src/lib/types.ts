@@ -32,6 +32,7 @@ export interface Opportunity {
   description: string;
   carriers: string[];
   annual_volume: string;
+  annual_parcel_volume?: string;
   fulfillment_type: FulfillmentType;
   shipping_scope: string[];
   status: OpportunityStatus;

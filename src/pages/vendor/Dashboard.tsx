@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Opportunity } from '../../lib/types';
-import { Package, Calendar, Clock, Truck } from 'lucide-react';
+import { Package, Calendar, Clock, Truck, DollarSign } from 'lucide-react';
+import { formatSpend, formatVolume } from '../../lib/format';
 
 export default function VendorDashboard() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -87,9 +88,15 @@ export default function VendorDashboard() {
                 {/* Meta row */}
                 <div className="flex items-center gap-4 text-xs text-gray-500 pt-3 border-t border-gray-100">
                   <span className="flex items-center gap-1">
-                    <Package className="w-3.5 h-3.5" />
-                    {opp.annual_volume || 'N/A'}
+                    <DollarSign className="w-3.5 h-3.5" />
+                    {formatSpend(opp.annual_volume)}
                   </span>
+                  {opp.annual_parcel_volume && (
+                    <span className="flex items-center gap-1">
+                      <Package className="w-3.5 h-3.5" />
+                      {formatVolume(opp.annual_parcel_volume)}
+                    </span>
+                  )}
                   <span className="flex items-center gap-1">
                     <Truck className="w-3.5 h-3.5" />
                     {opp.fulfillment_type}

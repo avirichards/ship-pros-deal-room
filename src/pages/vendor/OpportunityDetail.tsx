@@ -5,9 +5,10 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../components/ui/Toast';
 import { Opportunity, OpportunityFile, VendorSubmission } from '../../lib/types';
 import { DataPreviewModal } from '../../components/ui/DataPreviewModal';
+import { formatSpend, formatVolume } from '../../lib/format';
 import {
   ArrowLeft, Download, FileText, Clock,
-  Calendar, Package, Truck, CheckCircle, Upload, Check, Globe, Heart, Table2, X
+  Calendar, Package, Truck, CheckCircle, Upload, Check, Globe, Heart, Table2, X, DollarSign, Building2
 } from 'lucide-react';
 
 export default function VendorOpportunityDetail() {
@@ -230,12 +231,21 @@ export default function VendorOpportunityDetail() {
             </div>
           </div>
           <div className="flex items-start gap-2">
-            <FileText className="w-4 h-4 text-gray-400 mt-0.5" />
+            <DollarSign className="w-4 h-4 text-gray-400 mt-0.5" />
             <div>
-              <p className="text-xs text-gray-500">Annual Volume</p>
-              <p className="text-sm text-gray-900">{opp.annual_volume || 'Not specified'}</p>
+              <p className="text-xs text-gray-500">Annual Spend (est)</p>
+              <p className="text-sm text-gray-900">{formatSpend(opp.annual_volume)}</p>
             </div>
           </div>
+          {opp.annual_parcel_volume && (
+            <div className="flex items-start gap-2">
+              <Package className="w-4 h-4 text-gray-400 mt-0.5" />
+              <div>
+                <p className="text-xs text-gray-500">Annual Parcel Volume</p>
+                <p className="text-sm text-gray-900">{formatVolume(opp.annual_parcel_volume)}</p>
+              </div>
+            </div>
+          )}
           {opp.deadline && (
             <div className="flex items-start gap-2">
               <Calendar className="w-4 h-4 text-gray-400 mt-0.5" />

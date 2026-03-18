@@ -19,6 +19,7 @@ export default function CreateOpportunity() {
   const [description, setDescription] = useState('');
   const [carriers, setCarriers] = useState<string[]>([]);
   const [annualVolume, setAnnualVolume] = useState('');
+  const [annualParcelVolume, setAnnualParcelVolume] = useState('');
   const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('Parcel');
   const [shippingRegions, setShippingRegions] = useState<ShippingRegion[]>(['Domestic']);
   const [status, setStatus] = useState<OpportunityStatus>('Open');
@@ -60,6 +61,7 @@ export default function CreateOpportunity() {
           setDescription(data.description || '');
           setCarriers(data.carriers || []);
           setAnnualVolume(data.annual_volume || '');
+          setAnnualParcelVolume(data.annual_parcel_volume || '');
           setFulfillmentType(data.fulfillment_type as FulfillmentType);
           setShippingRegions(Array.isArray(data.shipping_scope) ? data.shipping_scope : [data.shipping_scope || 'Domestic']);
           setStatus(data.status as OpportunityStatus);
@@ -74,6 +76,7 @@ export default function CreateOpportunity() {
             description: data.description || '',
             carriers: JSON.stringify(data.carriers || []),
             annualVolume: data.annual_volume || '',
+            annualParcelVolume: data.annual_parcel_volume || '',
             fulfillmentType: data.fulfillment_type,
             shippingRegions: JSON.stringify(Array.isArray(data.shipping_scope) ? data.shipping_scope : [data.shipping_scope || 'Domestic']),
             status: data.status,
@@ -101,6 +104,7 @@ export default function CreateOpportunity() {
       description,
       carriers: JSON.stringify(carriers),
       annualVolume,
+      annualParcelVolume,
       fulfillmentType,
       shippingRegions: JSON.stringify(shippingRegions),
       status,
@@ -110,7 +114,7 @@ export default function CreateOpportunity() {
       key => (currentValues as any)[key] !== (initialValues as any)[key]
     ) || files.length > 0;
     setIsDirty(dirty);
-  }, [name, description, carriers, annualVolume, fulfillmentType, shippingRegions, status, deadline, files, initialValues, isEditing]);
+  }, [name, description, carriers, annualVolume, annualParcelVolume, fulfillmentType, shippingRegions, status, deadline, files, initialValues, isEditing]);
 
   // Warn on browser back / tab close
   useEffect(() => {
@@ -207,6 +211,7 @@ export default function CreateOpportunity() {
         description: description.trim(),
         carriers,
         annual_volume: annualVolume.trim(),
+        annual_parcel_volume: annualParcelVolume.trim(),
         fulfillment_type: fulfillmentType,
         shipping_scope: shippingRegions,
         status,
@@ -493,10 +498,10 @@ export default function CreateOpportunity() {
               </div>
 
               {/* Volume + Fulfillment */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div>
                   <label htmlFor="volume" className="block text-sm font-medium text-gray-700 mb-1">
-                    Est. Annual Shipping Volume
+                    Estimated Annual Shipping Spend
                   </label>
                   <input
                     id="volume"
@@ -504,7 +509,20 @@ export default function CreateOpportunity() {
                     value={annualVolume}
                     onChange={e => setAnnualVolume(e.target.value)}
                     className="input-field"
-                    placeholder='e.g., "$500K" or "50,000 packages"'
+                    placeholder='e.g., "$500,000" or "500K"'
+                  />
+                </div>
+                <div>
+                  <label htmlFor="parcelVolume" className="block text-sm font-medium text-gray-700 mb-1">
+                    Estimated Annual Parcel Volume
+                  </label>
+                  <input
+                    id="parcelVolume"
+                    type="text"
+                    value={annualParcelVolume}
+                    onChange={e => setAnnualParcelVolume(e.target.value)}
+                    className="input-field"
+                    placeholder='e.g., "50000"'
                   />
                 </div>
                 <div>
