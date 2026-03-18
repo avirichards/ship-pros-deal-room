@@ -31,6 +31,7 @@ export default function AdminOpportunityDetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showNotifyModal, setShowNotifyModal] = useState(false);
   const [notifyVendorsList, setNotifyVendorsList] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedVendors, setSelectedVendors] = useState<Set<string>>(new Set());
   const [sendingNotification, setSendingNotification] = useState(false);
   const [previewFile, setPreviewFile] = useState<OpportunityFile | null>(null);
@@ -142,11 +143,24 @@ export default function AdminOpportunityDetail() {
     setSelectedVendors(newSet);
   };
 
+  const filteredVendors = notifyVendorsList.filter(v => 
+    (v.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (v.company || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (v.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const selectAllVendors = () => {
-    if (selectedVendors.size === notifyVendorsList.length) {
-      setSelectedVendors(new Set());
+    const filteredIds = filteredVendors.map(v => v.id);
+    const allFilteredSelected = filteredIds.every(id => selectedVendors.has(id)) && filteredIds.length > 0;
+    
+    if (allFilteredSelected) {
+      const newSet = new Set(selectedVendors);
+      filteredIds.forEach(id => newSet.delete(id));
+      setSelectedVendors(newSet);
     } else {
-      setSelectedVendors(new Set(notifyVendorsList.map(v => v.id)));
+      const newSet = new Set(selectedVendors);
+      filteredIds.forEach(id => newSet.add(id));
+      setSelectedVendors(newSet);
     }
   };
 
@@ -248,21 +262,31 @@ export default function AdminOpportunityDetail() {
             </div>
             <p className="text-sm text-gray-600 mb-4">Select the vendors you want to notify about this opportunity.</p>
             
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="Search by name, company, or email..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="input-field w-full text-sm"
+              />
+            </div>
+            
             <div className="flex items-center justify-between mb-2">
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={notifyVendorsList.length > 0 && selectedVendors.size === notifyVendorsList.length}
+                  checked={filteredVendors.length > 0 && filteredVendors.every(v => selectedVendors.has(v.id))}
                   onChange={selectAllVendors}
                   className="w-4 h-4 rounded border-gray-300 text-teal-500 focus:ring-teal-500"
                 />
-                Select All ({notifyVendorsList.length})
+                Select All ({filteredVendors.length})
               </label>
-              <span className="text-sm text-gray-500">{selectedVendors.size} selected</span>
+              <span className="text-sm text-gray-500">{selectedVendors.size} total selected</span>
             </div>
             
             <div className="flex-1 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100 mb-6 min-h-[200px]">
-              {notifyVendorsList.map(v => (
+              {filteredVendors.map(v => (
                 <label key={v.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer transition-colors">
                   <input
                     type="checkbox"
