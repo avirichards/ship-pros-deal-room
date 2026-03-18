@@ -68,9 +68,10 @@ export function Sidebar() {
         </button>
 
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-navy-700" data-tour="sidebar-logo">
-          <img src="/SP_Logo.png" alt="Ship Pros" className="h-10 object-contain object-left block" />
-          <p className="text-xs font-medium text-white mt-1">Deal Room</p>
+        <div className="flex items-center gap-2 px-6 py-5 border-b border-navy-700" data-tour="sidebar-logo">
+          <img src="/SP_Logo.png" alt="Ship Pros" className="h-8 object-contain" />
+          <span className="text-xs font-medium text-white opacity-60">|</span>
+          <span className="text-xs font-medium text-white">Deal Room</span>
         </div>
 
         {/* Navigation */}
