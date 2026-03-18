@@ -5,7 +5,7 @@ import { Opportunity, OpportunityFile, VendorInterest, VendorView, OpportunitySt
 import { useToast } from '../../components/ui/Toast';
 import {
   ArrowLeft, Download, FileText, Users, Eye, Trash2,
-  Calendar, Package, Truck, Clock, Save, Globe, Table2, Upload
+  Calendar, Package, Truck, Clock, Save, Globe, Table2, Upload, Bell
 } from 'lucide-react';
 import { DataPreviewModal } from '../../components/ui/DataPreviewModal';
 
@@ -29,6 +29,10 @@ export default function AdminOpportunityDetail() {
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showNotifyModal, setShowNotifyModal] = useState(false);
+  const [notifyVendorsList, setNotifyVendorsList] = useState<any[]>([]);
+  const [selectedVendors, setSelectedVendors] = useState<Set<string>>(new Set());
+  const [sendingNotification, setSendingNotification] = useState(false);
   const [previewFile, setPreviewFile] = useState<OpportunityFile | null>(null);
 
   useEffect(() => {
@@ -105,6 +109,47 @@ export default function AdminOpportunityDetail() {
     navigate('/admin');
   }
 
+  useEffect(() => {
+    if (showNotifyModal && notifyVendorsList.length === 0) {
+      supabase.from('profiles').select('id, email, full_name, company').eq('role', 'vendor').then(({ data }) => {
+        if (data) setNotifyVendorsList(data);
+      });
+    }
+  }, [showNotifyModal, notifyVendorsList.length]);
+
+  async function handleNotifyVendors() {
+    if (selectedVendors.size === 0) return;
+    setSendingNotification(true);
+    try {
+      const vendorIds = Array.from(selectedVendors);
+      await supabase.functions.invoke('notify-vendors', {
+        body: { opportunity_id: id, vendor_ids: vendorIds }
+      });
+      toast(`Notification sent to ${vendorIds.length} vendor(s)`);
+      setShowNotifyModal(false);
+      setSelectedVendors(new Set());
+    } catch (err) {
+      toast('Failed to send notifications', 'error');
+    } finally {
+      setSendingNotification(false);
+    }
+  }
+
+  const toggleVendorSelection = (vendorId: string) => {
+    const newSet = new Set(selectedVendors);
+    if (newSet.has(vendorId)) newSet.delete(vendorId);
+    else newSet.add(vendorId);
+    setSelectedVendors(newSet);
+  };
+
+  const selectAllVendors = () => {
+    if (selectedVendors.size === notifyVendorsList.length) {
+      setSelectedVendors(new Set());
+    } else {
+      setSelectedVendors(new Set(notifyVendorsList.map(v => v.id)));
+    }
+  };
+
   const formatDate = (date: string) => new Date(date).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric'
   });
@@ -148,6 +193,10 @@ export default function AdminOpportunityDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowNotifyModal(true)} className="btn-primary px-3 py-2 text-sm">
+            <Bell className="w-4 h-4 mr-1.5 inline" />
+            Notify Vendors
+          </button>
           <select
             value={opp.status}
             onChange={e => handleStatusChange(e.target.value as OpportunityStatus)}
@@ -178,6 +227,87 @@ export default function AdminOpportunityDetail() {
               <button onClick={handleDelete} className="btn-danger px-4 py-2 text-sm">
                 <Trash2 className="w-4 h-4" />
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notify Vendors Modal */}
+      {showNotifyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !sendingNotification && setShowNotifyModal(false)} />
+          <div className="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-teal-50 rounded-lg">
+                  <Bell className="w-5 h-5 text-teal-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Notify Vendors</h3>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">Select the vendors you want to notify about this opportunity.</p>
+            
+            <div className="flex items-center justify-between mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={notifyVendorsList.length > 0 && selectedVendors.size === notifyVendorsList.length}
+                  onChange={selectAllVendors}
+                  className="w-4 h-4 rounded border-gray-300 text-teal-500 focus:ring-teal-500"
+                />
+                Select All ({notifyVendorsList.length})
+              </label>
+              <span className="text-sm text-gray-500">{selectedVendors.size} selected</span>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100 mb-6 min-h-[200px]">
+              {notifyVendorsList.map(v => (
+                <label key={v.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={selectedVendors.has(v.id)}
+                    onChange={() => toggleVendorSelection(v.id)}
+                    className="w-4 h-4 rounded border-gray-300 text-teal-500 focus:ring-teal-500"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{v.full_name || 'Unknown'}</p>
+                    <p className="text-xs text-gray-500 truncate">{v.company ? `${v.company} · ${v.email}` : v.email}</p>
+                  </div>
+                </label>
+              ))}
+              {notifyVendorsList.length === 0 && (
+                <div className="p-8 text-center text-gray-500 text-sm flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mb-4"></div>
+                  Loading vendors...
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-auto">
+              <button 
+                onClick={() => setShowNotifyModal(false)} 
+                disabled={sendingNotification}
+                className="btn-secondary px-4 py-2 text-sm"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleNotifyVendors}
+                disabled={sendingNotification || selectedVendors.size === 0}
+                className="btn-primary px-4 py-2 text-sm"
+              >
+                {sendingNotification ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Bell className="w-4 h-4 mr-1.5 inline" />
+                    Send Notification
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -711,7 +711,7 @@ export default function CreateOpportunity() {
                     disabled={saving || !name.trim()}
                     className="btn-secondary w-full"
                   >
-                    {saving ? 'Saving...' : 'Save as Draft'}
+                    {saving ? 'Saving...' : 'Save Without Notifying'}
                   </button>
                   <button
                     type="button"
