@@ -7,7 +7,6 @@ import {
   LogOut,
   Menu,
   X,
-  Package,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -69,14 +68,9 @@ export function Sidebar() {
         </button>
 
         {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-6 border-b border-navy-700" data-tour="sidebar-logo">
-          <div className="w-8 h-8 bg-teal-500 rounded-md flex items-center justify-center">
-            <Package className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-base font-semibold">Ship Pros</h1>
-            <p className="text-xs text-gray-400">Deal Room</p>
-          </div>
+        <div className="px-6 py-5 border-b border-navy-700" data-tour="sidebar-logo">
+          <img src="/ship-pros-logo.jpg" alt="Ship Pros" className="h-8 object-contain object-left" />
+          <p className="text-xs text-gray-400 mt-1.5 ml-0.5">Deal Room</p>
         </div>
 
         {/* Navigation */}

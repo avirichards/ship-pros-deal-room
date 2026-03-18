@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { Package, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 export default function ResetPassword() {
   const [email, setEmail] = useState('');
@@ -69,11 +69,8 @@ export default function ResetPassword() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 bg-teal-500 rounded-xl flex items-center justify-center mb-4">
-            <Package className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-2xl font-semibold text-white">Ship Pros</h1>
-          <p className="text-gray-400 text-sm mt-1">Deal Room</p>
+          <img src="/ship-pros-logo.jpg" alt="Ship Pros" className="h-12 object-contain mb-4" />
+          <p className="text-gray-400 text-sm">Deal Room</p>
         </div>
 
         {/* Card */}

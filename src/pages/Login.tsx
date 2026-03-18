@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Package } from 'lucide-react';
+
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -30,11 +30,8 @@ export default function Login() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 bg-teal-500 rounded-xl flex items-center justify-center mb-4">
-            <Package className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-2xl font-semibold text-white">Ship Pros</h1>
-          <p className="text-gray-400 text-sm mt-1">Deal Room</p>
+          <img src="/ship-pros-logo.jpg" alt="Ship Pros" className="h-12 object-contain mb-4" />
+          <p className="text-gray-400 text-sm">Deal Room</p>
         </div>
 
         {/* Login Card */}
