@@ -447,7 +447,7 @@ export default function AdminDashboard() {
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Deadline</th>
                 <th className="px-4 py-3">Annual Spend (est)</th>
-                <th className="px-4 py-3">Parcel Volume</th>
+                <th className="px-4 py-3">Parcel Volume (est)</th>
                 <th className="px-4 py-3">Files</th>
                 <th className="px-4 py-3">Interested</th>
                 <th className="px-4 py-3">Submissions</th>

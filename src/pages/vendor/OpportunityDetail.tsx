@@ -241,7 +241,7 @@ export default function VendorOpportunityDetail() {
             <div className="flex items-start gap-2">
               <Package className="w-4 h-4 text-gray-400 mt-0.5" />
               <div>
-                <p className="text-xs text-gray-500">Annual Parcel Volume</p>
+                <p className="text-xs text-gray-500">Annual Parcel Volume (est)</p>
                 <p className="text-sm text-gray-900">{formatVolume(opp.annual_parcel_volume)}</p>
               </div>
             </div>
