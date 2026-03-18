@@ -53,7 +53,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 h-full w-64 bg-navy-950 text-white z-50
+          fixed top-0 left-0 h-full w-64 bg-navy-800 text-white z-50
           flex flex-col transition-transform duration-200
           lg:translate-x-0
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -69,8 +69,8 @@ export function Sidebar() {
 
         {/* Logo */}
         <div className="px-6 py-5 border-b border-navy-700" data-tour="sidebar-logo">
-          <img src="/SP_Logo.jpeg" alt="Ship Pros" className="h-8 object-contain object-left" />
-          <p className="text-xs text-gray-400 mt-1.5 ml-0.5">Deal Room</p>
+          <img src="/SP_Logo.jpeg" alt="Ship Pros" className="h-10 object-contain object-left" />
+          <p className="text-xs text-white mt-1.5">Deal Room</p>
         </div>
 
         {/* Navigation */}
