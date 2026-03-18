@@ -129,7 +129,7 @@ Deno.serve(async (req: Request) => {
     const html = `
       <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
         <div style="background-color: #0B1120; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
-          <h1 style="color: #00BFA6; margin: 0; font-size: 20px;">Ship Pros Deal Room</h1>
+          <img src="${SITE_URL}/SP_Logo.jpeg" alt="Ship Pros" style="height: 36px; margin-bottom: 8px;" />
           <p style="color: #9CA3AF; margin: 4px 0 0; font-size: 14px;">New Opportunity Available</p>
         </div>
         <div style="background-color: #ffffff; padding: 24px; border: 1px solid #E5E7EB; border-top: none; border-radius: 0 0 12px 12px;">

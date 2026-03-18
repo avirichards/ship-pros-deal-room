@@ -69,7 +69,7 @@ export default function ResetPassword() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/ship-pros-logo.jpg" alt="Ship Pros" className="h-12 object-contain mb-4" />
+          <img src="/SP_Logo.jpeg" alt="Ship Pros" className="h-14 object-contain mb-3" />
           <p className="text-gray-400 text-sm">Deal Room</p>
         </div>
 

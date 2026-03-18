@@ -69,7 +69,7 @@ export function Sidebar() {
 
         {/* Logo */}
         <div className="px-6 py-5 border-b border-navy-700" data-tour="sidebar-logo">
-          <img src="/ship-pros-logo.jpg" alt="Ship Pros" className="h-8 object-contain object-left" />
+          <img src="/SP_Logo.jpeg" alt="Ship Pros" className="h-8 object-contain object-left" />
           <p className="text-xs text-gray-400 mt-1.5 ml-0.5">Deal Room</p>
         </div>
 
