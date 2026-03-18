@@ -202,7 +202,10 @@ export default function VendorOpportunityDetail() {
       {/* Metadata */}
       <div className="card p-6">
         {opp.description && (
-          <p className="text-sm text-gray-600 mb-5">{opp.description}</p>
+          <div className="mb-5">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1">Notes</h3>
+            <p className="text-sm text-gray-600">{opp.description}</p>
+          </div>
         )}
 
         <div className="grid grid-cols-2 gap-4">

@@ -13,7 +13,7 @@ export default function VendorDashboard() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    return (localStorage.getItem('vendor-view-mode') as ViewMode) || 'tiles';
+    return (localStorage.getItem('vendor-view-mode') as ViewMode) || 'table';
   });
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
