@@ -207,7 +207,7 @@ export default function AdminOpportunityDetail() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => setShowNotifyModal(true)} className="btn-primary px-3 py-2 text-sm">
             <Bell className="w-4 h-4 mr-1.5 inline" />
             Notify Vendors
@@ -348,7 +348,7 @@ export default function AdminOpportunityDetail() {
             {opp.description && (
               <p className="text-sm text-gray-600 mb-4">{opp.description}</p>
             )}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-start gap-2">
                 <Package className="w-4 h-4 text-gray-400 mt-0.5" />
                 <div>

@@ -60,11 +60,11 @@
   }
 
   .page-header {
-    @apply flex items-center justify-between mb-6;
+    @apply flex items-start sm:items-center justify-between mb-6 gap-3 flex-wrap;
   }
 
   .page-title {
-    @apply text-2xl font-semibold text-navy-950;
+    @apply text-xl sm:text-2xl font-semibold text-navy-950;
   }
 
   .section-title {
@@ -72,7 +72,7 @@
   }
 
   .table-container {
-    @apply card overflow-hidden;
+    @apply card overflow-x-auto -mx-4 sm:mx-0 rounded-none sm:rounded-lg border-x-0 sm:border-x;
   }
 
   .table-header {
