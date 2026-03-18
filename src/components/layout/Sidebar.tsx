@@ -69,8 +69,8 @@ export function Sidebar() {
 
         {/* Logo */}
         <div className="px-6 py-5 border-b border-navy-700" data-tour="sidebar-logo">
-          <img src="/SP_Logo.png" alt="Ship Pros" className="h-10 object-contain object-left" />
-          <p className="text-xs text-white mt-1.5">Deal Room</p>
+          <img src="/SP_Logo.png" alt="Ship Pros" className="h-10 object-contain object-left block" />
+          <p className="text-xs font-medium text-white mt-1">Deal Room</p>
         </div>
 
         {/* Navigation */}
