@@ -35,6 +35,7 @@ export interface Opportunity {
   fulfillment_type: FulfillmentType;
   shipping_scope: string[];
   status: OpportunityStatus;
+  company_name?: string;
   deadline: string | null;
   created_by: string;
   created_at: string;

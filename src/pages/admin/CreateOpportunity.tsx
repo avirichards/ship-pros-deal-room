@@ -15,6 +15,7 @@ export default function CreateOpportunity() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [description, setDescription] = useState('');
   const [carriers, setCarriers] = useState<string[]>([]);
   const [annualVolume, setAnnualVolume] = useState('');
@@ -55,6 +56,7 @@ export default function CreateOpportunity() {
         const { data, error } = await supabase.from('opportunities').select('*').eq('id', id).single();
         if (data && !error) {
           setName(data.name);
+          setCompanyName(data.company_name || '');
           setDescription(data.description || '');
           setCarriers(data.carriers || []);
           setAnnualVolume(data.annual_volume || '');
@@ -68,6 +70,7 @@ export default function CreateOpportunity() {
           // Save initial values for dirty checking
           setInitialValues({
             name: data.name,
+            companyName: data.company_name || '',
             description: data.description || '',
             carriers: JSON.stringify(data.carriers || []),
             annualVolume: data.annual_volume || '',
@@ -94,6 +97,7 @@ export default function CreateOpportunity() {
     if (!isEditing || !initialValues) return;
     const currentValues = {
       name,
+      companyName,
       description,
       carriers: JSON.stringify(carriers),
       annualVolume,
@@ -199,6 +203,7 @@ export default function CreateOpportunity() {
     try {
       const oppData = {
         name: name.trim(),
+        company_name: companyName.trim(),
         description: description.trim(),
         carriers,
         annual_volume: annualVolume.trim(),
@@ -371,8 +376,23 @@ export default function CreateOpportunity() {
                   value={name}
                   onChange={e => setName(e.target.value)}
                   className="input-field"
-                  placeholder="e.g., Acme Corp Shipping RFQ"
+                  placeholder="e.g., Q1 Logistics RFQ"
                   required
+                />
+              </div>
+
+              {/* Company Name */}
+              <div>
+                <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Company Name <span className="text-gray-400 font-normal">(Visible only to Admins)</span>
+                </label>
+                <input
+                  id="companyName"
+                  type="text"
+                  value={companyName}
+                  onChange={e => setCompanyName(e.target.value)}
+                  className="input-field"
+                  placeholder="e.g., Acme Corp"
                 />
               </div>
 

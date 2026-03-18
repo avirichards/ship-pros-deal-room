@@ -308,6 +308,11 @@ export default function AdminDashboard() {
                     <div className="text-sm font-medium text-navy-950">
                       {opp.name}
                     </div>
+                    {opp.company_name && (
+                      <div className="text-xs text-gray-500 mt-0.5 font-medium">
+                        {opp.company_name}
+                      </div>
+                    )}
                     <div className="flex gap-1.5 mt-1 flex-wrap">
                       {opp.carriers.map(c => (
                         <span key={c} className="badge-carrier">{c}</span>

@@ -138,6 +138,9 @@ export default function AdminOpportunityDetail() {
           </button>
           <div>
             <h1 className="page-title">{opp.name}</h1>
+            {opp.company_name && (
+              <p className="text-sm text-gray-500 font-medium mt-0.5 mb-1">{opp.company_name}</p>
+            )}
             <div className="flex items-center gap-2 mt-1">
               <span className={statusBadgeClass[opp.status]}>{opp.status}</span>
               <span className="text-sm text-gray-500">Created {formatDate(opp.created_at)}</span>
