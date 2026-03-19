@@ -119,9 +119,9 @@ export default function VendorDashboard() {
 
   return (
     <div>
-      <div className="page-header flex items-center justify-between">
-        <h1 className="page-title">Open Opportunities</h1>
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+      <div className="mb-6">
+        <h1 className="page-title mb-3">Open Opportunities</h1>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 w-fit">
           <button
             onClick={() => setViewMode('tiles')}
             className={`p-1.5 rounded-md transition-colors ${

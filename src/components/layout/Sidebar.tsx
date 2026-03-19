@@ -53,16 +53,16 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 h-full w-64 bg-navy-950 text-white z-50
+          fixed top-0 right-0 lg:left-0 h-full w-64 bg-navy-950 text-white z-50
           flex flex-col transition-transform duration-200
           lg:translate-x-0
-          ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${mobileOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Close button (mobile) */}
         <button
           onClick={() => setMobileOpen(false)}
-          className="lg:hidden absolute top-4 right-4 text-gray-400 hover:text-white"
+          className="lg:hidden absolute top-4 left-4 text-gray-400 hover:text-white"
         >
           <X className="w-5 h-5" />
         </button>
