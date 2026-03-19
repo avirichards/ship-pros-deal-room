@@ -97,16 +97,19 @@ Deno.serve(async (req: Request) => {
 
     let query = supabase
       .from('profiles')
-      .select('id, email, full_name')
+      .select('id, email, full_name, email_notifications')
       .eq('role', 'vendor');
       
     if (vendor_ids && Array.isArray(vendor_ids) && vendor_ids.length > 0) {
       query = query.in('id', vendor_ids);
     }
     
-    const { data: vendors, error: vendorError } = await query;
+    const { data: allVendors, error: vendorError } = await query;
 
-    if (vendorError || !vendors || vendors.length === 0) {
+    // Filter out vendors who have opted out of email notifications
+    const vendors = (allVendors || []).filter(v => v.email_notifications !== false);
+
+    if (vendorError || vendors.length === 0) {
       return new Response(JSON.stringify({ message: 'No vendors to notify' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

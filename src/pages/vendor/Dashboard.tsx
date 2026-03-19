@@ -13,7 +13,10 @@ export default function VendorDashboard() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    return (localStorage.getItem('vendor-view-mode') as ViewMode) || 'table';
+    const saved = localStorage.getItem('vendor-view-mode') as ViewMode;
+    if (saved) return saved;
+    // Default to tiles on mobile, table on desktop
+    return window.innerWidth < 768 ? 'tiles' : 'table';
   });
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -211,8 +214,8 @@ export default function VendorDashboard() {
         </div>
       ) : (
         /* ───── Table View ───── */
-        <div className="table-container">
-          <table className="w-full">
+        <div className="table-container" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <table className="w-full" style={{ minWidth: '800px' }}>
             <thead>
               <tr className="table-header">
                 <ThButton column="name">Opportunity</ThButton>

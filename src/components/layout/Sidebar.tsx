@@ -102,7 +102,7 @@ export function Sidebar() {
         <div className="px-3 py-4 border-t border-navy-700">
           <button 
             onClick={() => {
-              if (profile?.role === 'admin') navigate('/admin/settings');
+              navigate(profile?.role === 'admin' ? '/admin/settings' : '/vendor/settings');
               setMobileOpen(false);
             }}
             className="w-full text-left px-3 py-2 mb-2 rounded-md hover:bg-navy-800 transition-colors cursor-pointer group"

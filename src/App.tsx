@@ -15,6 +15,7 @@ import VendorManagement from './pages/admin/VendorManagement';
 import AdminSettings from './pages/admin/Settings';
 import VendorDashboard from './pages/vendor/Dashboard';
 import VendorOpportunityDetail from './pages/vendor/OpportunityDetail';
+import VendorSettings from './pages/vendor/Settings';
 
 function RootRedirect() {
   const { profile, loading } = useAuth();
@@ -53,6 +54,7 @@ function App() {
             <Route element={<ProtectedRoute><RoleGate allowedRole="vendor"><AppLayout /></RoleGate></ProtectedRoute>}>
               <Route path="/vendor" element={<VendorDashboard />} />
               <Route path="/vendor/opportunities/:id" element={<VendorOpportunityDetail />} />
+              <Route path="/vendor/settings" element={<VendorSettings />} />
             </Route>
 
             {/* Catch-all */}
