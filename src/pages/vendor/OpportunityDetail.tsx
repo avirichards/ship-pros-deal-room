@@ -8,7 +8,7 @@ import { DataPreviewModal } from '../../components/ui/DataPreviewModal';
 import { formatSpend, formatVolume } from '../../lib/format';
 import {
   ArrowLeft, Download, FileText, Clock,
-  Calendar, Package, Truck, CheckCircle, Upload, Check, Globe, Heart, Table2, X, DollarSign, Building2
+  Calendar, Package, Truck, CheckCircle, Upload, Check, Globe, Heart, Table2, X, DollarSign, Building2, Briefcase
 } from 'lucide-react';
 
 export default function VendorOpportunityDetail() {
@@ -224,6 +224,13 @@ export default function VendorOpportunityDetail() {
             <div>
               <p className="text-xs text-gray-500">Fulfillment Type</p>
               <p className="text-sm text-gray-900">{opp.fulfillment_type}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <Briefcase className="w-4 h-4 text-gray-400 mt-0.5" />
+            <div>
+              <p className="text-xs text-gray-500">Industry Category</p>
+              <p className="text-sm text-gray-900">{opp.industry_category || 'Not specified'}</p>
             </div>
           </div>
           <div className="flex items-start gap-2">

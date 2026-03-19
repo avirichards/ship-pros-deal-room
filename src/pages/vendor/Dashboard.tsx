@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Opportunity } from '../../lib/types';
-import { Package, Calendar, Clock, Truck, DollarSign, LayoutGrid, List, ArrowUpDown, ArrowUp, ArrowDown, Globe } from 'lucide-react';
+import { Package, Calendar, Clock, Truck, DollarSign, LayoutGrid, List, ArrowUpDown, ArrowUp, ArrowDown, Globe, Briefcase } from 'lucide-react';
 import { formatSpend, formatVolume } from '../../lib/format';
 
-type SortKey = 'name' | 'annual_volume' | 'annual_parcel_volume' | 'fulfillment_type' | 'deadline' | 'created_at' | 'carriers' | 'shipping_scope';
+type SortKey = 'name' | 'annual_volume' | 'annual_parcel_volume' | 'fulfillment_type' | 'deadline' | 'created_at' | 'carriers' | 'shipping_scope' | 'industry_category';
 type SortDir = 'asc' | 'desc';
 type ViewMode = 'tiles' | 'table';
 
@@ -203,6 +203,12 @@ export default function VendorDashboard() {
                     <Truck className="w-3.5 h-3.5" />
                     {opp.fulfillment_type}
                   </span>
+                  {opp.industry_category && (
+                    <span className="flex items-center gap-1">
+                      <Briefcase className="w-3.5 h-3.5" />
+                      {opp.industry_category}
+                    </span>
+                  )}
                   <span className="flex items-center gap-1 ml-auto">
                     <Calendar className="w-3.5 h-3.5" />
                     {formatDate(opp.created_at)}
@@ -223,6 +229,7 @@ export default function VendorDashboard() {
                 <ThButton column="annual_volume">Annual Spend (est)</ThButton>
                 <ThButton column="annual_parcel_volume">Parcel Volume (est)</ThButton>
                 <ThButton column="fulfillment_type">Fulfillment</ThButton>
+                <ThButton column="industry_category">Industry</ThButton>
                 <ThButton column="shipping_scope">Region</ThButton>
                 <ThButton column="deadline">Deadline</ThButton>
                 <ThButton column="created_at">Created</ThButton>
@@ -253,6 +260,7 @@ export default function VendorDashboard() {
                     <td className="px-4 py-4 text-sm text-gray-600">{formatSpend(opp.annual_volume)}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">{formatVolume(opp.annual_parcel_volume)}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">{opp.fulfillment_type}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{opp.industry_category || '—'}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">
                       {Array.isArray(opp.shipping_scope) ? opp.shipping_scope.join(', ') : (opp.shipping_scope || '—')}
                     </td>

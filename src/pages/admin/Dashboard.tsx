@@ -445,6 +445,7 @@ export default function AdminDashboard() {
                 </th>
                 <th className="px-4 py-3">Opportunity</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Industry</th>
                 <th className="px-4 py-3">Deadline</th>
                 <th className="px-4 py-3">Annual Spend (est)</th>
                 <th className="px-4 py-3">Parcel Volume (est)</th>
@@ -487,6 +488,9 @@ export default function AdminDashboard() {
                   </td>
                   <td className="px-4 py-4" onClick={() => navigate(`/admin/opportunities/${opp.id}`)}>
                     <span className={statusBadgeClass[opp.status]}>{opp.status}</span>
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-600" onClick={() => navigate(`/admin/opportunities/${opp.id}`)}>
+                    {opp.industry_category || '—'}
                   </td>
                   <td className="px-4 py-4" onClick={() => navigate(`/admin/opportunities/${opp.id}`)}>
                     <div className="flex items-center gap-1.5">

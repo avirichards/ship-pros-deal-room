@@ -16,6 +16,7 @@ export default function CreateOpportunity() {
 
   const [name, setName] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [industryCategory, setIndustryCategory] = useState('');
   const [description, setDescription] = useState('');
   const [carriers, setCarriers] = useState<string[]>([]);
   const [annualVolume, setAnnualVolume] = useState('');
@@ -58,6 +59,7 @@ export default function CreateOpportunity() {
         if (data && !error) {
           setName(data.name);
           setCompanyName(data.company_name || '');
+          setIndustryCategory(data.industry_category || '');
           setDescription(data.description || '');
           setCarriers(data.carriers || []);
           setAnnualVolume(data.annual_volume || '');
@@ -73,6 +75,7 @@ export default function CreateOpportunity() {
           setInitialValues({
             name: data.name,
             companyName: data.company_name || '',
+            industryCategory: data.industry_category || '',
             description: data.description || '',
             carriers: JSON.stringify(data.carriers || []),
             annualVolume: data.annual_volume || '',
@@ -101,6 +104,7 @@ export default function CreateOpportunity() {
     const currentValues = {
       name,
       companyName,
+      industryCategory,
       description,
       carriers: JSON.stringify(carriers),
       annualVolume,
@@ -114,7 +118,7 @@ export default function CreateOpportunity() {
       key => (currentValues as any)[key] !== (initialValues as any)[key]
     ) || files.length > 0;
     setIsDirty(dirty);
-  }, [name, description, carriers, annualVolume, annualParcelVolume, fulfillmentType, shippingRegions, status, deadline, files, initialValues, isEditing]);
+  }, [name, description, carriers, annualVolume, annualParcelVolume, fulfillmentType, shippingRegions, status, deadline, files, initialValues, isEditing, companyName, industryCategory]);
 
   // Warn on browser back / tab close
   useEffect(() => {
@@ -208,6 +212,7 @@ export default function CreateOpportunity() {
       const oppData = {
         name: name.trim(),
         company_name: companyName.trim(),
+        industry_category: industryCategory.trim(),
         description: description.trim(),
         carriers,
         annual_volume: annualVolume.trim(),
@@ -398,6 +403,21 @@ export default function CreateOpportunity() {
                   onChange={e => setCompanyName(e.target.value)}
                   className="input-field"
                   placeholder="e.g., Acme Corp"
+                />
+              </div>
+
+              {/* Industry Category */}
+              <div>
+                <label htmlFor="industryCategory" className="block text-sm font-medium text-gray-700 mb-1">
+                  Industry Category
+                </label>
+                <input
+                  id="industryCategory"
+                  type="text"
+                  value={industryCategory}
+                  onChange={e => setIndustryCategory(e.target.value)}
+                  className="input-field"
+                  placeholder="e.g., E-commerce, Retail, Healthcare"
                 />
               </div>
 

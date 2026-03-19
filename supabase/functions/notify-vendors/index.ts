@@ -152,6 +152,10 @@ Deno.serve(async (req: Request) => {
               <td style="padding: 8px 0; color: #111827; font-weight: 500;">${opp.fulfillment_type}</td>
             </tr>
             <tr>
+              <td style="padding: 8px 0; color: #6B7280;">Industry Category</td>
+              <td style="padding: 8px 0; color: #111827; font-weight: 500;">${opp.industry_category || 'Not specified'}</td>
+            </tr>
+            <tr>
               <td style="padding: 8px 0; color: #6B7280;">Shipping Region</td>
               <td style="padding: 8px 0; color: #111827; font-weight: 500;">${shippingRegion}</td>
             </tr>
