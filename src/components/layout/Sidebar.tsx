@@ -37,7 +37,7 @@ export function Sidebar() {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-navy-950 text-white rounded-md"
+        className="lg:hidden fixed top-4 right-4 z-50 p-2 bg-navy-950 text-white rounded-md"
       >
         <Menu className="w-5 h-5" />
       </button>
