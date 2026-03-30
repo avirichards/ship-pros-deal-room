@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronRight, ChevronLeft, X, Sparkles } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 export interface TourStep {
   /** CSS selector for the element to highlight */
@@ -108,10 +109,17 @@ export function ProductTour({ steps, tourKey, onComplete }: ProductTourProps) {
     }
   };
 
-  const completeTour = () => {
+  const completeTour = async () => {
     localStorage.setItem(tourKey, 'true');
     setIsActive(false);
     onComplete?.();
+    
+    // Also save the preference permanently to the database so it syncs across devices
+    try {
+      await supabase.auth.updateUser({ data: { tour_completed: true } });
+    } catch (e) {
+      console.error('Failed to save tour completion status to database', e);
+    }
   };
 
   if (!isActive || !targetRect) return null;
@@ -126,7 +134,10 @@ export function ProductTour({ steps, tourKey, onComplete }: ProductTourProps) {
       <svg
         className="absolute inset-0 w-full h-full"
         style={{ pointerEvents: 'auto' }}
-        onClick={e => e.stopPropagation()}
+        onClick={e => {
+          e.stopPropagation();
+          completeTour(); // Dismiss the tour if user clicks on the background
+        }}
       >
         <defs>
           <mask id="tour-spotlight">

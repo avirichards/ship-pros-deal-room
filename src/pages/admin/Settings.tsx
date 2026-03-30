@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/ui/Toast';
-import { User, Mail, Building, Phone, Lock, Save } from 'lucide-react';
+import { User, Mail, Building, Phone, Lock, Save, Bell } from 'lucide-react';
 
 export default function AdminSettings() {
   const { profile } = useAuth();
@@ -14,6 +14,7 @@ export default function AdminSettings() {
   const [fullName, setFullName] = useState('');
   const [company, setCompany] = useState('');
   const [phone, setPhone] = useState('');
+  const [receiveSubmissionNotifications, setReceiveSubmissionNotifications] = useState(true);
 
   // Password Form State
   const [newPassword, setNewPassword] = useState('');
@@ -24,6 +25,9 @@ export default function AdminSettings() {
       setFullName(profile.full_name || '');
       setCompany(profile.company || '');
       setPhone(profile.phone || '');
+      if (profile.receive_submission_notifications !== undefined) {
+        setReceiveSubmissionNotifications(profile.receive_submission_notifications);
+      }
     }
   }, [profile]);
 
@@ -39,6 +43,7 @@ export default function AdminSettings() {
           full_name: fullName.trim(),
           company: company.trim(),
           phone: phone.trim(),
+          receive_submission_notifications: receiveSubmissionNotifications,
         })
         .eq('id', profile.id);
 
@@ -168,6 +173,24 @@ export default function AdminSettings() {
             </div>
 
             <div className="pt-2">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={receiveSubmissionNotifications}
+                  onChange={(e) => setReceiveSubmissionNotifications(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-teal-500 focus:ring-teal-500"
+                />
+                <div>
+                  <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-teal-600" />
+                    Vendor Submission Notifications
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">Receive an email when a vendor submits files.</p>
+                </div>
+              </label>
+            </div>
+
+            <div className="pt-4">
               <button 
                 type="submit" 
                 disabled={loading}
@@ -178,7 +201,7 @@ export default function AdminSettings() {
                 ) : (
                   <>
                     <Save className="w-4 h-4" />
-                    Save Profile Links
+                    Save Profile Changes
                   </>
                 )}
               </button>

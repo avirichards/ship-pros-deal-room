@@ -16,7 +16,7 @@ const statusBadgeClass: Record<OpportunityStatus, string> = {
 export default function AdminDashboard() {
   const [opportunities, setOpportunities] = useState<(Opportunity & { file_count: number; interest_count: number; submission_count: number })[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'All' | OpportunityStatus>('All');
+  const [filter, setFilter] = useState<'All' | 'Submitted' | OpportunityStatus>('All');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -66,6 +66,8 @@ export default function AdminDashboard() {
 
   const filtered = filter === 'All'
     ? opportunities
+    : filter === 'Submitted'
+    ? opportunities.filter(o => o.submission_count > 0)
     : opportunities.filter(o => o.status === filter);
 
   const allFilteredSelected = filtered.length > 0 && filtered.every(o => selected.has(o.id));
@@ -214,7 +216,7 @@ export default function AdminDashboard() {
 
       {/* Filter tabs */}
       <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit" data-tour="filter-tabs">
-        {['All', ...STATUSES].map(status => (
+        {['All', 'Open', 'Submitted', 'Quoted', 'Closed/Won', 'Closed/Lost'].map(status => (
           <button
             key={status}
             onClick={() => { setFilter(status as any); clearSelection(); }}

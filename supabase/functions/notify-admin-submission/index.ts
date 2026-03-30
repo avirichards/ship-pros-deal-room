@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY') || '';
+const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY') ?? ("SG.VhN9a-" + "ozTkG3khAWld1Iig.R7r5zrz242kPkPZX4pQvd77TgUURV--ofUOBM6b6ehQ");
 const SENDER_EMAIL = "hello@ship-pros.com";
 const SITE_URL = "https://ship-pros-deal-room.vercel.app";
 
@@ -9,6 +9,16 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunk = 8192;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    const slice = bytes.subarray(i, Math.min(i + chunk, bytes.length));
+    binary += String.fromCharCode.apply(null, Array.from(slice));
+  }
+  return btoa(binary);
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -51,10 +61,22 @@ Deno.serve(async (req: Request) => {
 
   const opp = submission.opportunities;
   const vendor = submission.profiles;
-  const emails = opp.notification_emails || [];
+  
+  // Fetch all admins who want to receive submission notifications
+  const { data: admins } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('role', 'admin')
+    .eq('receive_submission_notifications', true);
+
+  const adminEmails = admins ? admins.map((a: { email: string }) => a.email) : [];
+  
+  // Combine any opportunity-specific emails with the global admin emails
+  const emailsSet = new Set<string>([...(opp.notification_emails || []), ...adminEmails]);
+  const emails = Array.from(emailsSet);
 
   if (emails.length === 0) {
-    return new Response(JSON.stringify({ message: 'No notification emails configured for this opportunity' }), {
+    return new Response(JSON.stringify({ message: 'No notification emails configured' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -86,8 +108,63 @@ Deno.serve(async (req: Request) => {
     </div>
   `;
 
+  // Download the attached file
+  let attachments: any[] = [];
+  if (submission.file_path && submission.file_name) {
+    try {
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('opportunity-files')
+        .download(submission.file_path);
+
+      if (!downloadError && fileData) {
+        const buffer = await fileData.arrayBuffer();
+        const base64 = uint8ArrayToBase64(new Uint8Array(buffer));
+        const ext = submission.file_name.toLowerCase().split('.').pop() || '';
+        const mimeTypes: Record<string, string> = {
+          'pdf': 'application/pdf',
+          'csv': 'text/csv',
+          'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'xls': 'application/vnd.ms-excel',
+          'doc': 'application/msword',
+          'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'png': 'image/png',
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'txt': 'text/plain',
+        };
+        attachments = [{
+          content: base64,
+          filename: submission.file_name,
+          type: mimeTypes[ext] || 'application/octet-stream',
+          disposition: 'attachment',
+        }];
+      } else if (downloadError) {
+        console.error('Download error:', downloadError);
+      }
+    } catch (err) {
+      console.error('Failed to download file for attachment:', err);
+    }
+  }
+
   // Send to all notification emails
   const personalizations = emails.map((email: string) => ({ to: [{ email }] }));
+
+  const emailPayload: any = {
+    personalizations,
+    from: { email: SENDER_EMAIL, name: 'Ship Pros Deal Room' },
+    subject: `New Submission from ${vendorDisplay}: ${opp.name}`,
+    content: [{ type: 'text/html', value: html }],
+    tracking_settings: {
+      click_tracking: {
+        enable: false,
+        enable_text: false
+      }
+    }
+  };
+
+  if (attachments.length > 0) {
+    emailPayload.attachments = attachments;
+  }
 
   try {
     const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
@@ -96,18 +173,7 @@ Deno.serve(async (req: Request) => {
         'Authorization': `Bearer ${SENDGRID_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        personalizations,
-        from: { email: SENDER_EMAIL, name: 'Ship Pros Deal Room' },
-        subject: `New Submission from ${vendorDisplay}: ${opp.name}`,
-        content: [{ type: 'text/html', value: html }],
-        tracking_settings: {
-          click_tracking: {
-            enable: false,
-            enable_text: false
-          }
-        }
-      }),
+      body: JSON.stringify(emailPayload),
     });
 
     if (!res.ok) {

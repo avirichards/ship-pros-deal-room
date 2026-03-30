@@ -58,11 +58,14 @@ const vendorTourSteps: TourStep[] = [
 ];
 
 export function AppLayout() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const isAdmin = profile?.role === 'admin';
 
   const tourSteps = isAdmin ? adminTourSteps : vendorTourSteps;
-  const tourKey = isAdmin ? 'ship-pros-admin-tour-completed' : 'ship-pros-vendor-tour-completed';
+  const tourKey = `ship-pros-tour-completed-${user?.id || 'guest'}`;
+
+  // If the user has completed the tour on any device permanently, skip rendering it
+  const hasCompletedInDatabase = user?.user_metadata?.tour_completed === true;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -72,10 +75,12 @@ export function AppLayout() {
           <Outlet />
         </div>
       </main>
-      <ProductTour
-        steps={tourSteps}
-        tourKey={tourKey}
-      />
+      {!hasCompletedInDatabase && (
+        <ProductTour
+          steps={tourSteps}
+          tourKey={tourKey}
+        />
+      )}
     </div>
   );
 }
