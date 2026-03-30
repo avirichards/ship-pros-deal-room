@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { Opportunity, OpportunityStatus, STATUSES } from '../../lib/types';
 import { formatSpend, formatVolume } from '../../lib/format';
 import { useToast } from '../../components/ui/Toast';
-import { Plus, FileText, Users, Clock, Upload, Trash2, ChevronDown, X, Bell } from 'lucide-react';
+import { Plus, FileText, Users, Clock, Upload, Trash2, ChevronDown, X, Bell, Search } from 'lucide-react';
 
 const statusBadgeClass: Record<OpportunityStatus, string> = {
   'Open': 'badge-open',
@@ -23,6 +23,7 @@ export default function AdminDashboard() {
   const [showNotifyModal, setShowNotifyModal] = useState(false);
   const [notifyVendorsList, setNotifyVendorsList] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [opportunitySearch, setOpportunitySearch] = useState('');
   const [selectedVendors, setSelectedVendors] = useState<Set<string>>(new Set());
   const [sendingNotification, setSendingNotification] = useState(false);
   const [bulkProcessing, setBulkProcessing] = useState(false);
@@ -64,11 +65,20 @@ export default function AdminDashboard() {
     setLoading(false);
   }
 
-  const filtered = filter === 'All'
+  const filtered = (filter === 'All'
     ? opportunities
     : filter === 'Submitted'
     ? opportunities.filter(o => o.submission_count > 0)
-    : opportunities.filter(o => o.status === filter);
+    : opportunities.filter(o => o.status === filter))
+    .filter(o => {
+      const q = opportunitySearch.toLowerCase();
+      if (!q) return true;
+      return (
+        o.name.toLowerCase().includes(q) ||
+        (o.company_name || '').toLowerCase().includes(q) ||
+        (o.industry_category || '').toLowerCase().includes(q)
+      );
+    });
 
   const allFilteredSelected = filtered.length > 0 && filtered.every(o => selected.has(o.id));
 
@@ -214,21 +224,35 @@ export default function AdminDashboard() {
         </Link>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit" data-tour="filter-tabs">
-        {['All', 'Open', 'Submitted', 'Quoted', 'Closed/Won', 'Closed/Lost'].map(status => (
-          <button
-            key={status}
-            onClick={() => { setFilter(status as any); clearSelection(); }}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              filter === status
-                ? 'bg-white text-navy-950 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {status}
-          </button>
-        ))}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        {/* Filter tabs */}
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit flex-wrap" data-tour="filter-tabs">
+          {['All', 'Open', 'Submitted', 'Quoted', 'Closed/Won', 'Closed/Lost'].map(status => (
+            <button
+              key={status}
+              onClick={() => { setFilter(status as any); clearSelection(); }}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                filter === status
+                  ? 'bg-white text-navy-950 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative w-full sm:w-72">
+          <input
+            type="text"
+            placeholder="Search deals, companies, industries..."
+            value={opportunitySearch}
+            onChange={e => setOpportunitySearch(e.target.value)}
+            className="input-field pl-9 h-[38px] w-full text-sm"
+          />
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        </div>
       </div>
 
       {/* Bulk Action Bar */}
