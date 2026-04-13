@@ -407,6 +407,15 @@ export default function AdminOpportunityDetail() {
                   </div>
                 </div>
               )}
+              {opp.report_days && (
+                <div className="flex items-start gap-2">
+                  <Clock className="w-4 h-4 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-gray-500">Report Timeframe</p>
+                    <p className="text-sm text-gray-900">{opp.report_days} Days</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

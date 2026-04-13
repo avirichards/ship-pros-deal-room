@@ -25,6 +25,7 @@ export default function CreateOpportunity() {
   const [shippingRegions, setShippingRegions] = useState<ShippingRegion[]>(['Domestic']);
   const [status, setStatus] = useState<OpportunityStatus>('Open');
   const [deadline, setDeadline] = useState('');
+  const [reportDays, setReportDays] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -68,6 +69,7 @@ export default function CreateOpportunity() {
           setShippingRegions(Array.isArray(data.shipping_scope) ? data.shipping_scope : [data.shipping_scope || 'Domestic']);
           setStatus(data.status as OpportunityStatus);
           setDeadline(data.deadline || '');
+          setReportDays(data.report_days?.toString() || '');
           if (data.carriers && data.carriers.some((c: string) => !standardCarriers.includes(c as any) && c !== 'Other')) {
             setShowOther(true);
           }
@@ -84,6 +86,7 @@ export default function CreateOpportunity() {
             shippingRegions: JSON.stringify(Array.isArray(data.shipping_scope) ? data.shipping_scope : [data.shipping_scope || 'Domestic']),
             status: data.status,
             deadline: data.deadline || '',
+            reportDays: data.report_days?.toString() || '',
           });
 
           // Fetch existing files
@@ -113,12 +116,13 @@ export default function CreateOpportunity() {
       shippingRegions: JSON.stringify(shippingRegions),
       status,
       deadline,
+      reportDays,
     };
     const dirty = Object.keys(currentValues).some(
       key => (currentValues as any)[key] !== (initialValues as any)[key]
     ) || files.length > 0;
     setIsDirty(dirty);
-  }, [name, description, carriers, annualVolume, annualParcelVolume, fulfillmentType, shippingRegions, status, deadline, files, initialValues, isEditing, companyName, industryCategory]);
+  }, [name, description, carriers, annualVolume, annualParcelVolume, fulfillmentType, shippingRegions, status, deadline, reportDays, files, initialValues, isEditing, companyName, industryCategory]);
 
   // Warn on browser back / tab close
   useEffect(() => {
@@ -221,6 +225,7 @@ export default function CreateOpportunity() {
         shipping_scope: shippingRegions,
         status,
         deadline: deadline || null,
+        report_days: reportDays ? parseInt(reportDays, 10) : null,
         created_by: user!.id,
       };
 
@@ -627,18 +632,34 @@ export default function CreateOpportunity() {
                 </div>
               </div>
 
-              {/* Deadline */}
-              <div>
-                <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-1">
-                  Deadline
-                </label>
-                <input
-                  id="deadline"
-                  type="date"
-                  value={deadline}
-                  onChange={e => setDeadline(e.target.value)}
-                  className="input-field"
-                />
+              {/* Deadline & Report Timeframe */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-1">
+                    Deadline
+                  </label>
+                  <input
+                    id="deadline"
+                    type="date"
+                    value={deadline}
+                    onChange={e => setDeadline(e.target.value)}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="reportDays" className="block text-sm font-medium text-gray-700 mb-1">
+                    Report Timeframe (Days)
+                  </label>
+                  <input
+                    id="reportDays"
+                    type="number"
+                    min="1"
+                    value={reportDays}
+                    onChange={e => setReportDays(e.target.value)}
+                    className="input-field"
+                    placeholder="e.g., 30"
+                  />
+                </div>
               </div>
             </div>
           </div>

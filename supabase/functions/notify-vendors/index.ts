@@ -122,6 +122,7 @@ Deno.serve(async (req: Request) => {
     const deadline = opp.deadline
       ? new Date(opp.deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
       : 'No deadline';
+    const reportDays = opp.report_days ? `${opp.report_days} Days` : null;
 
     const opportunityUrl = `${SITE_URL}/vendor/opportunities/${opp.id}`;
 
@@ -163,6 +164,10 @@ Deno.serve(async (req: Request) => {
               <td style="padding: 8px 0; color: #6B7280;">Deadline</td>
               <td style="padding: 8px 0; color: #111827; font-weight: 500;">${deadline}</td>
             </tr>
+            ${reportDays ? `<tr>
+              <td style="padding: 8px 0; color: #6B7280;">Report Timeframe</td>
+              <td style="padding: 8px 0; color: #111827; font-weight: 500;">${reportDays}</td>
+            </tr>` : ''}
             ${fileListHtml}
           </table>
           <div style="margin-top: 24px; text-align: center;">

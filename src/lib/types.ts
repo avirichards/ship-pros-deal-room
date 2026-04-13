@@ -39,6 +39,7 @@ export interface Opportunity {
   status: OpportunityStatus;
   company_name?: string;
   deadline: string | null;
+  report_days?: number;
   created_by: string;
   created_at: string;
   updated_at: string;
